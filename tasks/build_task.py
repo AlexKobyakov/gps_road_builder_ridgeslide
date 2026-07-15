@@ -142,7 +142,7 @@ class BuildRoadGraphTask(QgsTask):
                     fh.write(run_log.manifest_line(
                         self._plugin_version(), result.get('params'),
                         result.get('stats')) + '\n')
-            except Exception:  # pragma: no cover - defensive
+            except Exception:  # nosec B110 - best-effort manifest write, ignore failure
                 pass
             return True
         except Exception as exc:  # pragma: no cover - defensive
@@ -150,7 +150,7 @@ class BuildRoadGraphTask(QgsTask):
             try:
                 from ..core.logging_setup import get_logger
                 get_logger().exception('Build task failed')
-            except Exception:
+            except Exception:  # nosec B110 - avoid crashing while logging a failure
                 pass
             return False
 

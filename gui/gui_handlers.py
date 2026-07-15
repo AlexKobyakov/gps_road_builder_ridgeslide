@@ -505,7 +505,7 @@ class GuiEventHandlers:
                 with open(runs_manifest_path(), 'a', encoding='utf-8') as fh:
                     fh.write(run_log.manifest_line(
                         'post', params, stats) + '\n')
-            except Exception:  # pragma: no cover - defensive
+            except Exception:  # nosec B110 - best-effort manifest write, ignore failure
                 pass
             self.dialog.log_message('✨ {0}: {1} {2}, {3} {4}'.format(
                 t('pt_done'), stats.get('edges', 0), t('result_edges'),

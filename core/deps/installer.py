@@ -21,7 +21,7 @@ Year: 2026
 
 import importlib.util
 import os
-import subprocess
+import subprocess  # nosec B404 - used only to run the QGIS python's own pip
 import sys
 import urllib.parse
 import urllib.request
@@ -150,7 +150,9 @@ def pip_available(python=None):
     """Доступен ли `pip` в интерпретаторе QGIS."""
     python = python or python_executable()
     try:
-        proc = subprocess.run(
+        # nosec B603: не shell, аргументы фиксированы (интерпретатор + `-m pip`),
+        # пользовательского ввода в команде нет.
+        proc = subprocess.run(  # nosec B603
             [python, '-m', 'pip', '--version'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             timeout=30, **_no_window())
@@ -271,7 +273,9 @@ def _no_window():
 
 def _run_pip(cmd, progress_cb=None, cancelled_cb=None):
     """Запустить pip, транслируя вывод в progress_cb; поддержка отмены."""
-    proc = subprocess.Popen(
+    # nosec B603: не shell; `cmd` собирается плагином (интерпретатор + pip +
+    # имена пакетов из реестра PACKAGES), не из произвольного ввода пользователя.
+    proc = subprocess.Popen(  # nosec B603
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, bufsize=1, **_no_window())
     try:

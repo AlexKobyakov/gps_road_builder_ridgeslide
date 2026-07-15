@@ -3,7 +3,7 @@
 [![CI](https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/actions/workflows/ci.yml)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 ![QGIS 3.22+](https://img.shields.io/badge/QGIS-3.22%2B%20(3.x)-589632.svg)
-![Version](https://img.shields.io/badge/version-1.0.1-informational.svg)
+![Version](https://img.shields.io/badge/version-1.0.2-informational.svg)
 ![Tests](https://img.shields.io/badge/tests-207%20offline-success.svg)
 
 **A QGIS plugin that reconstructs a connected road/path network (a graph) from

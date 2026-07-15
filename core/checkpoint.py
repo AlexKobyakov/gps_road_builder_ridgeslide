@@ -55,7 +55,10 @@ def save_points(cache_dir, df, meta=None):
 def load_points(cache_dir):
     """Загрузить точки: (DataFrame, meta)."""
     import pandas as pd
-    df = pd.read_pickle(os.path.join(cache_dir, POINTS_DATA))
+    # nosec B301: читаем ТОЛЬКО собственный чекпоинт-кэш, который сам же и пишет
+    # save_points() в выбранную пользователем папку, а не внешние недоверенные
+    # данные. Формат оставлен pickle ради сохранения dtypes DataFrame.
+    df = pd.read_pickle(os.path.join(cache_dir, POINTS_DATA))  # nosec B301
     return df, _read_json(os.path.join(cache_dir, POINTS_META))
 
 

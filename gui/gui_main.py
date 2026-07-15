@@ -63,7 +63,7 @@ class GpsRoadBuilderDialog(QDialog):
             saved = SettingsManager().get('language')
             if saved:
                 translations.set_language(saved)
-        except Exception:
+        except Exception:  # nosec B110 - best-effort saved-language load, use default
             pass
 
     def setupWindow(self):

@@ -3,7 +3,7 @@ name=GPS Road Builder (RidgeSlide)
 qgisMinimumVersion=3.22
 qgisMaximumVersion=3.99
 description=Reconstructs a connected road/path network (graph) from raw GPS tracks using the RidgeSlide density method
-version=1.0.1
+version=1.0.2
 author=Alex Kobyakov
 email=kobyakov@lesburo.ru
 about=GPS Road Builder reconstructs a connected road/path-network graph from raw
@@ -26,7 +26,15 @@ category=Vector
 icon=resources/icon.svg
 experimental=False
 deprecated=False
-changelog=1.0.1 - RidgeSlide sub-brand in the name
+changelog=1.0.2 - QGIS repository security scan (Bandit)
+    - Resolved the Bandit findings that blocked upload by marking them as
+      reviewed false positives with justified per-line # nosec codes: reading
+      the plugin's OWN checkpoint cache (pickle, B301); running the QGIS
+      python's own pip in the dependency installer (subprocess, B404/B603);
+      and a few intentional best-effort error swallows (B110). No behaviour
+      change. Secrets, flake8, file-permission and suspicious-file scans were
+      already clean
+    1.0.1 - RidgeSlide sub-brand in the name
     - Display name is now "GPS Road Builder (RidgeSlide)" to link the plugin to
       its RidgeSlide engine while staying discoverable; the window title and
       header match. The package folder and settings keys are unchanged
