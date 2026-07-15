@@ -181,3 +181,4 @@ scalable method to construct compact road networks from GPS trajectories* (IJGIS
 and the Slide method by Paul Mach (Strava Labs), which he reimagined,
 reimplemented in Python/NumPy/Numba, corrected, generalized and brought to
 completion as a distinct method.
+# gps_road_builder_ridgeslide
