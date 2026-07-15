@@ -1,4 +1,4 @@
-# GPS Road Builder
+# GPS Road Builder (RidgeSlide)
 
 [![CI](https://github.com/AlexKobyakov/gps_road_builder/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexKobyakov/gps_road_builder/actions/workflows/ci.yml)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
