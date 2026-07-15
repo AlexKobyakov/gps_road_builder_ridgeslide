@@ -1,0 +1,35 @@
+name: Release
+
+# Build the installable QGIS plugin zip on a version tag and attach it to the
+# GitHub Release. Runs only on the PUBLIC repo (the private dev repo also gets
+# this file via build_release_repo.py, but the job is skipped there).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    if: github.repository == 'AlexKobyakov/gps_road_builder_ridgeslide'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build the plugin zip (no dependencies — stdlib only)
+        run: python scripts/build_plugin.py
+
+      - name: Create the release and attach the zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/gps_road_builder_ridgeslide.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true

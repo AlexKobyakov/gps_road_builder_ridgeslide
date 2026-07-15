@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Package the GPS Road Builder plugin into an installable QGIS zip.
-Собирает dist/gps_road_builder.zip только из файлов плагина, исключая данные,
-документацию, тесты и служебные каталоги (чтобы zip был компактным и подходил
-для официального реестра QGIS).
+Package the GPS Road Builder (RidgeSlide) plugin into an installable QGIS zip.
+Собирает dist/gps_road_builder_ridgeslide.zip только из файлов плагина, исключая
+данные, документацию, тесты и служебные каталоги (чтобы zip был компактным и
+подходил для официального реестра QGIS). Имя папки внутри zip = PLUGIN_NAME =
+идентификатор плагина в QGIS/реестре; внутренние id (QSettings/логи/libs)
+остаются 'gps_road_builder' — это внутренние строки, от имени папки не зависят.
 
 Использование:
     python scripts/build_plugin.py
@@ -12,7 +14,7 @@ Package the GPS Road Builder plugin into an installable QGIS zip.
 import os
 import zipfile
 
-PLUGIN_NAME = 'gps_road_builder'
+PLUGIN_NAME = 'gps_road_builder_ridgeslide'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 

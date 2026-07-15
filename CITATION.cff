@@ -10,8 +10,8 @@ authors:
 version: 1.0.0
 date-released: 2026-07-14
 license: GPL-3.0-or-later
-repository-code: "https://github.com/AlexKobyakov/gps_road_builder"
-url: "https://github.com/AlexKobyakov/gps_road_builder"
+repository-code: "https://github.com/AlexKobyakov/gps_road_builder_ridgeslide"
+url: "https://github.com/AlexKobyakov/gps_road_builder_ridgeslide"
 abstract: >-
   A QGIS plugin that reconstructs a connected road/path-network graph from raw
   GPS tracks using RidgeSlide, a density-ridge trajectory-consolidation method
