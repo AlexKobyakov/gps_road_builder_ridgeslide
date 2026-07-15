@@ -1,0 +1,228 @@
+[general]
+name=GPS Road Builder (RidgeSlide)
+qgisMinimumVersion=3.22
+qgisMaximumVersion=3.99
+description=Reconstructs a connected road/path network (graph) from raw GPS tracks using the RidgeSlide density method
+version=1.0.1
+author=Alex Kobyakov
+email=kobyakov@lesburo.ru
+about=GPS Road Builder reconstructs a connected road/path-network graph from raw
+    GPS tracks of any kind — forestry haul roads, logistics, sports (running,
+    cycling), off-road, vessels, OSM traces and more. Its core is RidgeSlide — a
+    Python/NumPy/Numba density method conceived, generalized, developed and
+    completed by Alexander Kobyakov (building on Guo et al. 2020 and the Slide
+    method, with his own corrections and additions): build a density surface,
+    compact trajectories onto road ridges, extract a centerline skeleton, then
+    weight, clean and connect the edges. A KDE mode is available for very sparse data. Designed
+    for large inputs (tens of millions of points) with background processing that
+    keeps the QGIS UI responsive. Heavy optional accelerators (scikit-image,
+    numba) are installed on demand from a dialog — no silent auto-install.
+    Interface in Russian and English.
+tracker=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/issues
+repository=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide
+homepage=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide
+tags=gps,gpx,road,network,graph,trajectory,tracks,skeleton,density,routing,ridgeslide,slide,forest,logistics,osm
+category=Vector
+icon=resources/icon.svg
+experimental=False
+deprecated=False
+changelog=1.0.1 - RidgeSlide sub-brand in the name
+    - Display name is now "GPS Road Builder (RidgeSlide)" to link the plugin to
+      its RidgeSlide engine while staying discoverable; the window title and
+      header match. The package folder and settings keys are unchanged
+    1.0.0 - Sprint 13: RidgeSlide boundary and first production release
+    - RidgeSlide carved into a clear, QGIS-agnostic core: renamed core/slide ->
+      core/ridgeslide (files refine.py, kernel.py) with a small public API
+      façade (RidgeSlide / RidgeSlideConfig / RidgeSlideResult) so the method can
+      be reused as a library; the plugin pipeline stays a client
+    - The RidgeSlide core is MIT-licensed (core/ridgeslide/LICENSE + NOTICE, with
+      the paulmach/slide + Guo 2020 lineage); the plugin stays GPLv3 (compatible)
+    - Added CITATION.cff and AUTHORS; documented the dual licensing
+    - A guard test enforces that the algorithm core imports no qgis/PyQt
+    - First production release (1.0.0)
+    0.17.0 - Sprint 12: topology and an accurate preset
+    - Break at crossings (Post-process): split two edges that cross
+      geometrically but share no node, inserting a real junction (GRASS
+      v.clean break) — improves connectivity of visually crossing but broken
+      roads. Optional (creates a false junction at bridges/overpasses)
+    - Junction consolidation (Post-process): merge clusters of nearby junction
+      nodes into one, cleaning the bushy intersections from 8-connectivity
+    - New preset "Sparse / RidgeSlide (accurate)": finer cell/resample, less
+      smoothing and micro-loop cleanup for geometry closer to the reference
+      (slower — numba recommended)
+    0.16.0 - Sprint 11: UI polish, RidgeSlide branding, QGIS 3.x
+    - Window: the minimize button now works (WindowMinimizeButtonHint)
+    - Tabs: reverted the bold font that clipped the active tab's last letter;
+      selection is shown by colour only, with a robust tab width (no clipping)
+    - About dialog redesigned as a styled card (like Support), highlighting the
+      RidgeSlide method and its authorship
+    - Support dialog: removed the "Maybe later" button (donate or close via X)
+    - Language switcher shows real flag icons (Windows does not render flag
+      emoji)
+    - UI now says "RidgeSlide" everywhere instead of bare "Slide" (tab, method,
+      backend, presets, tooltips); internal setting values are unchanged
+    - Compatibility: documented support for the whole QGIS 3.x branch (tested on
+      3.44 "Solothurn"); qgisMaximumVersion=3.99 keeps 4.x/Qt6 out until it is
+      separately supported
+    0.15.0 - Sprint 10: scenario presets
+    - New one-click presets beyond forestry, since the engine is
+      method-agnostic: "Dense tracks (running / cycling)", "Urban vehicles /
+      logistics", "OSM traces (heterogeneous)" and "Sparse vessels / AIS"
+    - Each encodes assumptions about the data (cell size, resample step, gap
+      segmentation, threshold mode) as a starting point — expect to tune
+    - Dense/urban/OSM use the RidgeSlide method; urban and OSM use the robust
+      percentile threshold; AIS uses coarse scale and wide segmentation gaps
+    0.14.2 - More connectivity + post-processing logging
+    - Directional bridge: connect dead-ends that face each other (their road
+      continuations point at one another) even beyond the normal radius
+    - Component stitching: join the nearest nodes of separate components into one
+      network (Kruskal over k-nearest neighbours), up to a max distance
+    - Post-processing runs now log their full settings and result counts
+      (bridged/snapped/faced/stitched/dropped) to the file log and the run
+      manifest, like build runs
+    0.14.1 - Node-to-edge gap bridging (post-processing connectivity)
+    - "Bridge gaps" now also snaps a dangling end to the nearest point on a
+      neighbouring edge (a T-gap), splitting that edge — not only end-to-end.
+      This is the common road gap that end-to-end bridging could not close, so
+      post-processing barely changed the graph before. The Post-process log now
+      reports bridged/snapped/components-dropped counts
+    0.14.0 - Sprint 9: new input sources
+    - Load input from a project vector layer (points or lines) or a GPX/KML/SHP
+      file, not only CSV/XLSX. Vector inputs need no coordinate columns — the
+      geometry provides them; device/time are auto-detected from field names or
+      synthesized; line layers treat each line as one track; GPX uses its
+      track_points sub-layer
+    - Data tab: an "Input source" selector (files / project layer / vector file)
+    0.13.1 - RidgeSlide authorship
+    - Documentation states throughout that RidgeSlide was conceived, generalized,
+      developed and completed by Alexander Kobyakov (README, ALGORITHMS,
+      USER_GUIDE, metadata)
+    0.13.0 - Sprint 8: product (docs, RidgeSlide, UI fixes)
+    - The custom Slide reimplementation is now named RidgeSlide (roads = ridges
+      of the density surface); metadata/README/ALGORITHMS updated accordingly
+    - Marked production-ready (experimental=False); positioning generalized
+      beyond forestry (logistics, sports, off-road, vessels, OSM, ...)
+    - New docs at repo root: rewritten README, USER_GUIDE.md, ALGORITHMS.md
+    - UI fixes: the active tab no longer clips its last letter (bold applied to
+      all tab states); the AOI group on the Data tab is now visible without
+      scrolling; the build script excludes test_temp/memory
+    0.12.1 - Sparse/Slide threshold fix (per-tile Otsu blow-out)
+    - The ui5 run showed per-tile Otsu thresholds ranging 0.03..374: tiles with
+      a town/yard got a huge threshold and dropped almost all roads (sparse
+      result). The "Sparse / Slide" preset now uses the percentile threshold
+      (scale-adaptive per tile) instead of Otsu, and a slightly finer cell (10 m)
+    - Tip: lower the threshold percentile for a denser network
+    0.12.0 - Sprint 7: KDE quality and device attributes
+    - KDE quality (WS-KDE): percentile threshold mode (robust on sparse data
+      where Otsu cuts above roads); KDE now uses all points incl. single fixes;
+      mask hole-filling and micro-loop removal kill the skeleton "crossings";
+      medial-axis (centerline) skeletonizer option; the sparse KDE preset uses
+      these by default
+    - Device attributes (WS-Dev): n_devices per edge (unique GPS devices near
+      the edge), written to the layer, GeoJSON and GraphML
+    - WS-Perf: resuming from a checkpoint already skips the input re-read
+      (Sprint 5); parallel tiles (A5) intentionally deferred — numba already
+      parallelizes Slide across cores and a process pool is unsafe in QGIS
+    0.11.4 - Drop remaining "FGIS LK" mentions
+    - Removed "ФГИС ЛК" from the KDE method label and its tooltip (kept only the
+      generic sparse-data description)
+    0.11.3 - Preset naming fix
+    - Sparse presets renamed: "Разреженные / Slide (рекоменд.)" and
+      "Разреженные / KDE (эксперим.)" — dropped "ФГИС ЛК" from the KDE preset
+      name and unified the spelling (разреженные) across the UI
+    0.11.2 - Backend clarity (numba vs numpy)
+    - The log now records the resolved Slide backend (setting -> using) so it is
+      clear whether numba or numpy actually ran
+    - The numpy backend option is relabelled "numpy (slow, reference)" and the
+      Slide-backend tooltip explains that installing numba on the Dependencies
+      tab does not select it — pick "Auto" or "numba"
+    0.11.1 - Sparse/Slide performance fix
+    - "Sparse / Slide" preset: numba backend + coarse resample (K=50, gap 700)
+      so sparse points no longer explode into tens of millions (was ~83M / 225
+      tiles); coarser cell for fewer tiles
+    - Guard: Slide on the numpy backend with >15M points now aborts early with
+      guidance instead of grinding for hours; a warning is logged when numba is
+      available but numpy is selected
+    - Log now shows the resample point-count inflation (before/after/ratio)
+    0.11.0 - Sprint 6: post-processing and connectivity
+    - Connectivity (WS-Conn): bridge dangling ends within a radius, drop small
+      components, keep only the largest network; optional morphological mask
+      closing for the Slide method too (core/graph/connect.py)
+    - New "Post-process" tab (WS-Post): improve an already-built graph (or a
+      chosen line layer) without a full rebuild — bridge gaps, smooth, clean
+      components; shared orchestrator core/graph/postops.py
+    - Area of interest (WS-AOI): clip input points by a polygon from a file or a
+      project layer before processing (removes points in the sea / out of zone)
+    - Connectivity/AOI settings also apply during a normal build
+    0.10.0 - Sprint 5: transparency and a working result
+    - Logging for parameter tuning (WS-L): the run now logs the full resolved
+      settings and per-stage metrics (per-tile binarization threshold, edges/
+      nodes before/after merge and cleanup) with per-stage durations; a compact
+      per-run manifest is appended to gps_road_builder_runs.jsonl; log rotation
+      raised to 5 MB; resuming from a checkpoint no longer re-reads the input
+    - New "Sparse / Slide (recommended)" preset — Slide builds a connected
+      network on sparse FGIS LK data; the KDE preset is marked experimental
+    - Polyline smoothing (WS-Smooth): optional Chaikin smoothing removes the
+      raster-skeleton stair-steps (Graph tab, keeps edge ends fixed)
+    - UI fixes (WS-U): the tab bar no longer scrolls away (scrolling moved
+      inside each tab) and tab titles are no longer truncated (+ tab tooltips)
+    - Presets now apply to all parameter tabs, not just Density/Graph
+    0.9.0 - Sprint 4 (WS-G): quality and attributes
+    - Graph post-cleaning against fragmentation: pass-through (degree-2) nodes
+      are merged into single polyline edges (always on); optional removal of
+      short dangling spurs (Graph tab, "remove dangling spurs shorter than")
+    - Edge attributes: road_class (main/improved/ordinary/winter by traversal
+      frequency quantiles) and a "reconstructed" flag (inferred segment with no
+      track coverage); written to the layer, GeoJSON and GraphML
+    - REB / anti-spoofing preprocessing filter (Preprocess tab): drops teleports
+      (>120 km/h), jumps >200 m in <60 s and A->B->C spikes
+    - Overview histograms use log-spaced bins with range labels, so skewed
+      frequency/length distributions are readable instead of one dominant bin
+    0.8.1 - WS-E completion: tooltips and method-aware fields
+    - Tooltips on every parameter of the Preprocess, Density/Slide, Graph and
+      Scale tabs (plain-language hints with recommendations)
+    - Fields irrelevant to the chosen method are greyed out: KDE disables
+      resample, Slide backend, sigma1/sigma2, kernel sharpness and Slide loops;
+      Slide disables KDE radius/buffer
+    0.8.0 - Big update, Sprint 3: tester convenience
+    - Checkpoints: cleaned points and projected tracks are saved to a chosen
+      cache folder; a run can start from a saved stage or stop after a stage, so
+      you re-tune later steps without re-running the expensive early ones
+    - Presets can be saved to and loaded from JSON files (not only the built-ins)
+    - Output tab: cache folder, "start from stage" and "stop after stage"
+    0.7.0 - Big update, Sprint 2: sparse-data method
+    - New "KDE + buffer" method for sparse GPS logging data (FGIS LK: a fix every
+      15 min / 5 km) — kernel density on points, gap bridging by a buffer, no
+      resampling/Slide; the Guo "Density + Slide" method stays for dense tracks
+    - Method and backend selection in the UI (Slide backend, skeletonizer, KDE
+      radius/buffer); "Sparse data / FGIS LK" preset
+    0.6.1 - Big update, Sprint 1: performance on large sparse datasets
+    - Tile assignment via per-track bbox (was O(tiles*tracks)); single vectorized
+      projection; near-duplicate thinning (numba); default cell 5 m + raster
+      guard; file log fixed, step plan/ETA/available-libraries reporting
+    0.6.0 - Phase 5: polish
+    - Export to GeoJSON / GraphML (pure) and SHP / GeoPackage (QgsVectorFileWriter)
+    - Rotating file log in the QGIS profile for debugging
+    - User guide (docs/USER_GUIDE.md), README, cross-platform CI (Linux + Windows)
+    - Plugin packaging script excluding data/docs/tests
+    0.5.0 - Phase 4: functional GUI
+    - Real tab controls (Data...Output), field presets, tooltips, result
+      histograms; Build runs the pipeline in a QgsTask and adds the road layer
+      styled by traversal frequency; progress, log and cancel
+    0.4.0 - Phase 3: scalability
+    - Split-and-merge over overlapping tiles with boundary fixing; close-node
+      merge that also cleans junction clusters
+    0.3.0 - Phase 2: MVP pipeline
+    - Density surface, improved Slide (numpy reference + numba backend, verified
+      against the reference implementation), skeleton -> graph, edge weights and
+      (f, l) artifact filtering
+    0.2.0 - Phase 1: data and CRS
+    - Robust CSV/XLSX reader (delimiter and datetime auto-detection), cleaning,
+      deduplication, segmentation, equidistant resampling; data-centered
+      Transverse Mercator working CRS
+    0.1.0 - Phase 0: plugin skeleton and UI chassis
+    - Tabbed main dialog (header with language selector, Support and About)
+    - Dependency installer framework (pip-into-target and prebuilt-wheels), no
+      silent auto-install; runs only on explicit user action
+    - Background task scaffold (QgsTask), settings persistence, RU/EN interface
+    - Offline unit tests and CI

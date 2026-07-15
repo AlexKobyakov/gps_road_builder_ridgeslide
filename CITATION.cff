@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "GPS Road Builder (RidgeSlide)"
+message: "If you use this software, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: Kobyakov
+    given-names: Alexander
+    email: kobyakov@lesburo.ru
+    affiliation: Lesburo
+version: 1.0.0
+date-released: 2026-07-14
+license: GPL-3.0-or-later
+repository-code: "https://github.com/AlexKobyakov/gps_road_builder"
+url: "https://github.com/AlexKobyakov/gps_road_builder"
+abstract: >-
+  A QGIS plugin that reconstructs a connected road/path-network graph from raw
+  GPS tracks using RidgeSlide, a density-ridge trajectory-consolidation method
+  (Python/NumPy/Numba) reworked from Guo et al. (2020) and the Slide approach
+  (paulmach/slide), with original corrections and additions. The RidgeSlide core
+  is MIT-licensed; the plugin is GPLv3.
+keywords:
+  - GIS
+  - QGIS
+  - GPS trajectories
+  - road network inference
+  - density ridges
+  - KDE
+  - Numba
+  - RidgeSlide

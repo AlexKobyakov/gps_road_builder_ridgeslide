@@ -1,0 +1,8 @@
+# Runtime libraries needed to exercise the pure core in offline tests.
+# In production these are provided by QGIS; here we install them via pip so the
+# core (io / preprocess / density) can be tested without QGIS.
+numpy
+pandas
+scipy
+pyproj
+openpyxl

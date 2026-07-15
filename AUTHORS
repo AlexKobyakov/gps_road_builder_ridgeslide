@@ -1,0 +1,10 @@
+GPS Road Builder — authors
+==========================
+
+Alexander Kobyakov (Кобяков Александр Викторович)
+  <kobyakov@lesburo.ru>, Lesburo — author and maintainer; concept, generalization,
+  development and completion of the RidgeSlide method and the QGIS plugin.
+
+Algorithm lineage (see core/ridgeslide/NOTICE):
+  - Paul Mach — original Slide approach (paulmach/slide, MIT, 2013).
+  - Guo et al. (2020) — density-based corrections adopted by RidgeSlide.

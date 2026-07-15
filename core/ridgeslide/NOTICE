@@ -1,0 +1,52 @@
+RidgeSlide
+==========
+
+RidgeSlide is an independent Python implementation and substantial extension of
+the Slide trajectory-refinement approach. It is a new density-aware
+implementation with published algorithmic corrections, convergence control,
+endpoint projection, KDE integration, adaptive (percentile) thresholding,
+post-processing, diagnostics and parallel execution — not a plain port.
+
+Copyright (c) 2026 Alexander Kobyakov.
+Licensed under the MIT License (see LICENSE in this folder).
+
+Origin and derivation
+----------------------
+
+Portions of the algorithm were derived from or validated against:
+
+  Paul Mach, slide: Vector to Raster Map Conflation
+  Copyright (c) 2013 Paul Mach
+  Licensed under the MIT License.
+  https://github.com/paulmach/slide
+
+RidgeSlide also incorporates algorithmic corrections and interpretations
+described in:
+
+  Guo, Y., et al. (2020). A density-based approach for road-network
+  reconstruction from GPS trajectories. (See article/ in the project.)
+
+Corrections adopted from Guo et al. (2020), verified line-by-line against the
+reference Go implementation (code taken as authoritative where it differs from
+the paper):
+
+  - distance component with a factor of 1/2;
+  - angle component as the bisector of normalized "arms", factor cbrt(cos) + 1;
+  - momentum (full previous-iteration correction);
+  - endpoint movement by projection onto the neighbouring segment;
+  - convergence: mean density + exponential smoothing (0.2) + MinLoops/MaxLoops.
+
+Original additions in RidgeSlide (beyond Slide/Guo):
+
+  - hybrid KDE density mode for very sparse data;
+  - percentile-based thresholding (robust where Otsu cuts above the roads);
+  - graph post-processing (spur/loop cleanup, connectivity, junction ops);
+  - run diagnostics and metrics;
+  - parallel Numba execution (@njit(parallel=True)) with a NumPy reference.
+
+Note
+----
+
+The surrounding QGIS plugin (GPS Road Builder) is licensed under GPLv3; this
+RidgeSlide core subpackage is licensed under the MIT License. MIT is
+GPL-compatible, so the GPLv3 plugin may incorporate this MIT-licensed core.

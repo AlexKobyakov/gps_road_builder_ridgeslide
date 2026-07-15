@@ -1,0 +1,5 @@
+# Development / CI dependencies (NOT required to run the plugin in QGIS).
+# The plugin itself relies on libraries shipped with QGIS plus optional
+# accelerators installed on demand from the Dependencies tab (see §7 of the plan).
+pytest>=7.0
+flake8>=6.0

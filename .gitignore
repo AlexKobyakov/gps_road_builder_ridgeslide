@@ -1,0 +1,22 @@
+# Локальные данные и исследования — хранятся только на локальном ПК,
+# в онлайн-репозиторий не публикуются.
+data/
+reserch/
+test_temp/
+
+# Служебное
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+build/
+dist/
+*.zip
+
+# Доустановленные зависимости плагина (ставятся пользователем локально)
+libs/
+_libs/

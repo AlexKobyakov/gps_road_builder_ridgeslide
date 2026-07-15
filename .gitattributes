@@ -1,0 +1,14 @@
+# Normalize line endings for text sources.
+*.py    text
+*.md    text
+*.txt   text
+*.cfg   text
+*.yml   text
+
+# Exclude non-plugin content from `git archive` exports.
+article/      export-ignore
+reserch/      export-ignore
+data/         export-ignore
+tests/        export-ignore
+scripts/      export-ignore
+.github/      export-ignore
