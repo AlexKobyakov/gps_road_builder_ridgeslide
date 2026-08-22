@@ -4,7 +4,7 @@ qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 hasProcessingProvider=yes
 description=Reconstructs a connected road/path network (graph) from raw GPS tracks using the RidgeSlide density method
-version=1.2.0
+version=1.2.1
 author=Alex Kobyakov
 email=kobyakov@lesburo.ru
 about=GPS Road Builder reconstructs a connected road/path-network graph from raw
@@ -28,7 +28,14 @@ category=Vector
 icon=resources/icon.svg
 experimental=False
 deprecated=False
-changelog=1.2.0 - Sprints 15–16: QGIS 4 / Qt6 support and 12-language UI
+changelog=1.2.1 - Sprint 17: QGIS Processing Provider and Toolbox integration
+    - Added a stable GPS Road Builder provider with three Processing algorithms
+      for Toolbox, Modeler and Batch Processing workflows.
+    - Processing algorithms reuse the shared QGIS adapter, support progress and
+      cancellation, and expose stable machine-readable IDs and output schemas.
+    - The provider now displays the GPS Road Builder icon instead of the default
+      Processing gear in the Toolbox.
+    1.2.0 - Sprints 15–16: QGIS 4 / Qt6 support and 12-language UI
     - One Qt5/Qt6-compatible codebase was manually verified in QGIS 3.44 and
       QGIS 4.2; qgisMaximumVersion is now 4.99 (no supportsQt6 flag)
     - Added Chinese, Hindi, Spanish, Arabic (RTL), French, Portuguese, German,
