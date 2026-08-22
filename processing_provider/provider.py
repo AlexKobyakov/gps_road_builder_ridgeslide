@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Provider registration class for GPS Road Builder Processing algorithms."""
 
+import os
+
 from qgis.core import QgsProcessingProvider
+from qgis.PyQt.QtGui import QIcon
 
 from ..translation_manager import translations
 from .algorithms import (
@@ -27,3 +30,9 @@ class GpsRoadBuilderProvider(QgsProcessingProvider):
 
     def longName(self):
         return self.name()
+
+    def icon(self):
+        """Show the plugin icon in Processing Toolbox and provider menus."""
+        icon_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), 'resources', 'icon.svg')
+        return QIcon(icon_path)

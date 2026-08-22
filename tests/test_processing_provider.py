@@ -96,3 +96,9 @@ def test_gui_uses_the_shared_qgis_adapter():
 def test_metadata_enables_processing_provider():
     metadata = _source('metadata.txt')
     assert 'hasProcessingProvider=yes' in metadata
+
+
+def test_processing_provider_uses_plugin_icon():
+    source = _source(os.path.join('processing_provider', 'provider.py'))
+    assert 'def icon(self):' in source
+    assert "'resources', 'icon.svg'" in source
