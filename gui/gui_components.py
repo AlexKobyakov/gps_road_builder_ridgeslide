@@ -8,8 +8,15 @@ Email: kobyakov@lesburo.ru
 Year: 2026
 """
 
-from qgis.PyQt.QtGui import QFont
-from qgis.PyQt.QtWidgets import QGroupBox, QPushButton, QProgressBar, QLabel
+import os
+
+from qgis.PyQt.QtCore import QRect
+from qgis.PyQt.QtGui import QColor, QFont, QIcon
+from qgis.PyQt.QtWidgets import (
+    QComboBox, QGroupBox, QPushButton, QProgressBar, QLabel, QStyle,
+    QStyledItemDelegate)
+
+from ..qgis_compat import qfont_weight, qt_class_enum, qt_enum
 
 
 class ModernGroupBox(QGroupBox):
@@ -38,6 +45,71 @@ class ModernGroupBox(QGroupBox):
         """)
 
 
+class ComboPopupDelegate(QStyledItemDelegate):
+    """Draw combo rows without letting the QGIS 4 theme erase hover text."""
+
+    def paint(self, painter, option, index):
+        highlighted = bool(option.state & (
+            qt_class_enum(QStyle, 'StateFlag', 'State_Selected')
+            | qt_class_enum(QStyle, 'StateFlag', 'State_MouseOver')))
+        background = '#3498db' if highlighted else '#ffffff'
+        foreground = '#ffffff' if highlighted else '#2c3e50'
+        painter.save()
+        painter.fillRect(option.rect, QColor(background))
+        painter.setPen(QColor(foreground))
+        painter.setFont(option.font)
+
+        left = option.rect.left() + 8
+        icon = index.data(qt_enum('ItemDataRole', 'DecorationRole'))
+        if isinstance(icon, QIcon) and not icon.isNull():
+            side = min(option.rect.height() - 6, 20)
+            icon_rect = QRect(left, option.rect.top() + 3, side, side)
+            icon.paint(painter, icon_rect, qt_enum('AlignmentFlag', 'AlignCenter'))
+            left = icon_rect.right() + 8
+        text_rect = QRect(
+            left, option.rect.top(), option.rect.right() - left - 5,
+            option.rect.height())
+        painter.drawText(
+            text_rect,
+            qt_enum('AlignmentFlag', 'AlignLeft')
+            | qt_enum('AlignmentFlag', 'AlignVCenter'),
+            str(index.data(qt_enum('ItemDataRole', 'DisplayRole')) or ''))
+        painter.restore()
+
+
+class StyledComboBox(QComboBox):
+    """Combo whose popup colours survive the QGIS 4 Windows item delegate."""
+
+    _POPUP_STYLE = """
+        QListView, QAbstractItemView {
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
+        QListView::item, QAbstractItemView::item {
+            background-color: #ffffff;
+            color: #2c3e50;
+        }
+        QListView::item:hover, QListView::item:selected,
+        QAbstractItemView::item:hover, QAbstractItemView::item:selected {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._style_popup()
+
+    def _style_popup(self):
+        """Style the popup view itself, not only a parent QComboBox selector."""
+        self.view().setStyleSheet(self._POPUP_STYLE)
+        self.view().setItemDelegate(ComboPopupDelegate(self.view()))
+
+    def showPopup(self):
+        self._style_popup()
+        super().showPopup()
+
+
 class ModernButton(QPushButton):
     """Стилизованная кнопка. button_type: primary | secondary | danger | success."""
 
@@ -51,7 +123,7 @@ class ModernButton(QPushButton):
         super().__init__(text, parent)
         self.button_type = button_type
         self.setMinimumHeight(40)
-        self.setFont(QFont("Segoe UI", 10, QFont.Medium))
+        self.setFont(QFont("Segoe UI", 10, qfont_weight('Medium')))
         self.apply_style()
 
     def apply_style(self):
@@ -129,6 +201,9 @@ class ModernProgressBar(QProgressBar):
 
 def apply_global_styles():
     """Глобальные стили для главного диалога."""
+    checkmark = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), 'resources',
+        'checkmark-white.svg').replace('\\', '/')
     return """
         QDialog {
             background-color: #f8f9fa;
@@ -162,6 +237,17 @@ def apply_global_styles():
             border-right: 5px solid transparent;
             border-top: 5px solid #7f8c8d;
         }
+        /* Explicit item colours are needed with the Qt6 Windows delegate:
+           without them a hovered combo row can become white-on-white. */
+        QComboBox QAbstractItemView::item {
+            color: #2c3e50;
+            background-color: #ffffff;
+        }
+        QComboBox QAbstractItemView::item:hover,
+        QComboBox QAbstractItemView::item:selected {
+            color: #ffffff;
+            background-color: #3498db;
+        }
         QSpinBox, QDoubleSpinBox {
             padding: 6px;
             border: 2px solid #bdc3c7;
@@ -177,6 +263,7 @@ def apply_global_styles():
         }
         QCheckBox::indicator:checked {
             background-color: #3498db; border-color: #3498db;
+            image: url("__CHECKMARK__");
         }
         QRadioButton { spacing: 8px; }
         QRadioButton::indicator {
@@ -195,7 +282,7 @@ def apply_global_styles():
             background: #bdc3c7; border-radius: 6px; min-height: 20px;
         }
         QScrollBar::handle:vertical:hover { background: #95a5a6; }
-    """
+    """.replace('__CHECKMARK__', checkmark)
 
 
 def create_styled_button(text, button_class="primary", icon_text=""):

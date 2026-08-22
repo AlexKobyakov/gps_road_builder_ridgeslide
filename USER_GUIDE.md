@@ -67,7 +67,32 @@ There are no optional columns yet; extra columns are ignored.
   "start from / stop after stage" for checkpointed runs.
 - **Dependencies** — install optional accelerators; see which are active.
 
-## 4. Choosing a method and preset
+## 4. Processing Toolbox
+
+The **GPS Road Builder** provider exposes the same core workflow without the
+main plugin dialog. It is intended for reproducible scripts, Batch Processing
+and Model Designer. Find it in **Processing → Toolbox → GPS Road Builder**.
+
+| Algorithm | Stable ID | Input |
+|---|---|---|
+| Build road network from layer | `gpsroadbuilder:build_network_from_layer` | Point or line feature source |
+| Build road network from folder | `gpsroadbuilder:build_network_from_folder` | Recursive CSV/XLSX folder |
+| Post-process road network | `gpsroadbuilder:postprocess_network` | Existing line network |
+
+All three algorithms write the normal QGIS `OUTPUT` Feature Sink in EPSG:4326.
+Its schema is `id`, `frequency`, `length`, `road_class`, `reconstructed`, and
+`n_devices`. The IDs, parameter keys and output key are public API: do not use
+translated labels in a Model Designer model or a `processing.run()` script.
+
+Choose a scenario preset first; common parameters are visible, while detailed
+controls are under **Advanced**. Every value is an explicit Processing
+parameter: the provider never reads the main dialog or saved plugin settings.
+Cancellation is cooperative; wait until the Processing progress panel reports
+that it has stopped before re-running an algorithm.
+Toolbox labels are captured when the provider is registered; after changing the
+plugin language, restart QGIS to refresh already-open Processing Toolbox labels.
+
+## 5. Choosing a method and preset
 
 - **RidgeSlide** (default) suits dense to moderately sparse tracks and builds a
   connected network by concentrating density onto road ridges. **Recommended for
@@ -101,7 +126,7 @@ The scenario presets (running/cycling, urban/logistics, OSM, AIS) encode
 starting point and adjust the cell size, resample step and threshold to your
 own tracks.
 
-## 5. Tuning — read the log
+## 6. Tuning — read the log
 
 Every run writes a detailed log to
 `<QGIS profile>/gps_road_builder/gps_road_builder.log` and appends a compact
@@ -127,7 +152,7 @@ runs). The log records:
 re‑tune later steps without re‑running read/clean, and the **Post‑process** tab to
 refine a built graph without rebuilding.
 
-## 6. Output & attributes
+## 7. Output & attributes
 
 The result layer (EPSG:4326, LineString) carries per‑edge attributes:
 
@@ -139,7 +164,7 @@ The result layer (EPSG:4326, LineString) carries per‑edge attributes:
 
 Export from the **Output** tab to GeoJSON, GraphML, Shapefile or GeoPackage.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **"Slide runs on numpy" warning / very slow** — set Slide backend to numba
   (install it on the Dependencies tab first).

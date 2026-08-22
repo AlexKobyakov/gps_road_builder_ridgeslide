@@ -1,9 +1,10 @@
 [general]
 name=GPS Road Builder (RidgeSlide)
 qgisMinimumVersion=3.22
-qgisMaximumVersion=3.99
+qgisMaximumVersion=4.99
+hasProcessingProvider=yes
 description=Reconstructs a connected road/path network (graph) from raw GPS tracks using the RidgeSlide density method
-version=1.0.2
+version=1.2.0
 author=Alex Kobyakov
 email=kobyakov@lesburo.ru
 about=GPS Road Builder reconstructs a connected road/path-network graph from raw
@@ -17,7 +18,8 @@ about=GPS Road Builder reconstructs a connected road/path-network graph from raw
     for large inputs (tens of millions of points) with background processing that
     keeps the QGIS UI responsive. Heavy optional accelerators (scikit-image,
     numba) are installed on demand from a dialog — no silent auto-install.
-    Interface in Russian and English.
+    Interface in 12 languages: Russian, English, Chinese, Hindi, Spanish,
+    Arabic, French, Portuguese, German, Indonesian, Thai and Vietnamese.
 tracker=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/issues
 repository=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide
 homepage=https://github.com/AlexKobyakov/gps_road_builder_ridgeslide
@@ -26,7 +28,20 @@ category=Vector
 icon=resources/icon.svg
 experimental=False
 deprecated=False
-changelog=1.0.2 - QGIS repository security scan (Bandit)
+changelog=1.2.0 - Sprints 15–16: QGIS 4 / Qt6 support and 12-language UI
+    - One Qt5/Qt6-compatible codebase was manually verified in QGIS 3.44 and
+      QGIS 4.2; qgisMaximumVersion is now 4.99 (no supportsQt6 flag)
+    - Added Chinese, Hindi, Spanish, Arabic (RTL), French, Portuguese, German,
+      Indonesian, Thai and Vietnamese, with SVG language flags and persisted
+      live switching; responsive controls accommodate long labels
+    - Fixed PyQt5 overloaded language-selector signals and made the Qt6 checked
+      checkbox state visible with a bundled white checkmark
+    1.0.3 - Sprint 14: complete live RU/EN switching
+    - Added a shared retranslateUi contract for tabs, widgets and dialogs
+    - Live language changes now update labels, tooltips, combos, tables,
+      result/stage text, duration units and the QGIS plugin action
+    - Combo labels preserve itemData/current values and language persists in QSettings
+    1.0.2 - QGIS repository security scan (Bandit)
     - Resolved the Bandit findings that blocked upload by marking them as
       reviewed false positives with justified per-line # nosec codes: reading
       the plugin's OWN checkpoint cache (pickle, B301); running the QGIS

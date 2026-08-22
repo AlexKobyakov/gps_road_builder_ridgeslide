@@ -3,3 +3,4 @@
 # accelerators installed on demand from the Dependencies tab (see §7 of the plan).
 pytest>=7.0
 flake8>=6.0
+bandit>=1.7    # security scan (matches the QGIS plugin-repo upload check)

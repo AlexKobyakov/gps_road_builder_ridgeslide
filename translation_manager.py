@@ -15,7 +15,7 @@ Year: 2026
 import importlib
 
 # Языки с письмом справа налево (для setLayoutDirection)
-RTL_LANGUAGES = set()
+RTL_LANGUAGES = {'ar'}
 
 # Отображаемые названия языков (эндоним) в порядке для UI. Флаг рисуется
 # ИКОНКОЙ (см. LANGUAGE_FLAGS + gui), а не эмодзи — Windows не рисует
@@ -23,12 +23,32 @@ RTL_LANGUAGES = set()
 LANGUAGE_LABELS = [
     ('ru', 'Русский'),
     ('en', 'English'),
+    ('zh', '中文'),
+    ('hi', 'हिन्दी'),
+    ('es', 'Español'),
+    ('ar', 'العربية'),
+    ('fr', 'Français'),
+    ('pt', 'Português'),
+    ('de', 'Deutsch'),
+    ('id', 'Bahasa Indonesia'),
+    ('th', 'ไทย'),
+    ('vi', 'Tiếng Việt'),
 ]
 
 # Код языка → имя файла флага в resources/flags/. Иконку подставляет GUI.
 LANGUAGE_FLAGS = {
     'ru': 'ru.svg',
     'en': 'en.svg',
+    'zh': 'zh.svg',
+    'hi': 'hi.svg',
+    'es': 'es.svg',
+    'ar': 'ar.svg',
+    'fr': 'fr.svg',
+    'pt': 'pt.svg',
+    'de': 'de.svg',
+    'id': 'id.svg',
+    'th': 'th.svg',
+    'vi': 'vi.svg',
 }
 
 
@@ -39,6 +59,7 @@ class TranslationManager:
         self.current_language = 'ru'
         self.fallback_language = 'en'
         self.loaded_languages = {}
+        self._language_listeners = []
 
         self.supported_languages = [code for code, _ in LANGUAGE_LABELS]
 
@@ -82,6 +103,8 @@ class TranslationManager:
         if language_code in self.supported_languages and \
                 self._load_language(language_code):
             self.current_language = language_code
+            for listener in tuple(self._language_listeners):
+                listener()
             return True
         return False
 
@@ -109,6 +132,15 @@ class TranslationManager:
     def reload_language(self, language_code):
         self.loaded_languages.pop(language_code, None)
         return self._load_language(language_code)
+
+    def add_language_listener(self, listener):
+        """Subscribe a UI owner to live language changes."""
+        if listener not in self._language_listeners:
+            self._language_listeners.append(listener)
+
+    def remove_language_listener(self, listener):
+        if listener in self._language_listeners:
+            self._language_listeners.remove(listener)
 
 
 # Глобальный объект переводов

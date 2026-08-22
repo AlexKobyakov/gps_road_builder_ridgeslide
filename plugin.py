@@ -11,8 +11,7 @@ Year: 2026
 import configparser
 import os
 
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QAction, QIcon
 from qgis.core import QgsApplication
 
 from .translation_manager import translations
@@ -59,6 +58,8 @@ class GpsRoadBuilderPlugin:
         self.actions = []
         self.menu = 'GPS Road Builder'
         self.dialog = None
+        self.processing_provider = None
+        translations.add_language_listener(self.retranslateUi)
 
     # ------------------------------------------------------------------
     # Метаданные плагина (из metadata.txt)
@@ -143,8 +144,33 @@ class GpsRoadBuilderPlugin:
             parent=self.iface.mainWindow(),
             status_tip=translations.get_text('plugin_description'),
         )
+        self._register_processing_provider()
+
+    def _register_processing_provider(self):
+        """Register once; provider IDs are a public Processing API."""
+        try:
+            from .processing_provider.provider import GpsRoadBuilderProvider
+            registry = QgsApplication.processingRegistry()
+            if registry.providerById('gpsroadbuilder') is None:
+                self.processing_provider = GpsRoadBuilderProvider()
+                registry.addProvider(self.processing_provider)
+        except Exception as exc:  # pragma: no cover - defensive QGIS boundary
+            print('GPS Road Builder: Processing provider registration failed: {0}'.format(exc))
+
+    def retranslateUi(self):
+        """Update QGIS actions immediately when the dialog language changes."""
+        for action in self.actions:
+            action.setText('🛰️ {0}'.format(translations.get_text('window_title')))
+            action.setStatusTip(translations.get_text('plugin_description'))
 
     def unload(self):
+        translations.remove_language_listener(self.retranslateUi)
+        if self.processing_provider is not None:
+            try:
+                QgsApplication.processingRegistry().removeProvider(self.processing_provider)
+            except Exception as exc:  # pragma: no cover - defensive QGIS boundary
+                print('GPS Road Builder: Processing provider removal failed: {0}'.format(exc))
+            self.processing_provider = None
         for action in self.actions:
             self.iface.removePluginVectorMenu(self.menu, action)
             self.iface.removeToolBarIcon(action)

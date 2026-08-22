@@ -13,16 +13,22 @@ Year: 2026
 
 import os
 
-from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor, QIcon
 from qgis.PyQt.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QFrame,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
     QTextEdit, QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
-    QTableWidgetItem as _Item,
+    QTableWidgetItem as _Item, QAbstractItemView,
 )
 
-from .gui_components import ModernButton, create_styled_button, create_info_label
+from .gui_components import (
+    ModernButton, StyledComboBox, create_styled_button, create_info_label)
+from .i18n import dependency_row_text, retranslate_combo
 from ..translation_manager import translations
+from ..qgis_compat import qt_class_enum, qt_enum
+
+
+PACKAGE_PURPOSE_ROLE = int(qt_enum('ItemDataRole', 'UserRole')) + 1
+PACKAGE_INSTALLED_ROLE = int(qt_enum('ItemDataRole', 'UserRole')) + 2
 
 
 def _flag_icon(code):
@@ -87,21 +93,29 @@ class HeaderWidget(QFrame):
         lang_icon.setStyleSheet(
             "QLabel { color: white; font-size: 16px; background: transparent; }")
 
-        self.language_combo = QComboBox()
-        self.language_combo.setFixedSize(150, 32)
+        self.language_combo = StyledComboBox()
+        self.language_combo.setMinimumWidth(150)
+        self.language_combo.setMinimumHeight(32)
+        # Qt5 builds can expose ``itemData`` as QVariant.  Keep the canonical
+        # codes separately so the language switch never depends on QVariant
+        # conversion semantics.
+        self._language_codes = []
 
         # Цвета пунктов задаём на уровне модели (роли), чтобы избежать
         # «белое на белом» на некоторых сборках Qt/Windows.
         dark, white = QColor('#2c3e50'), QColor('#ffffff')
         for code, label in translations.get_language_labels():
+            self._language_codes.append(code)
             icon = _flag_icon(code)
             if icon is not None:
                 self.language_combo.addItem(icon, label, code)
             else:
                 self.language_combo.addItem(label, code)
             i = self.language_combo.count() - 1
-            self.language_combo.setItemData(i, dark, Qt.ForegroundRole)
-            self.language_combo.setItemData(i, white, Qt.BackgroundRole)
+            self.language_combo.setItemData(
+                i, dark, qt_enum('ItemDataRole', 'ForegroundRole'))
+            self.language_combo.setItemData(
+                i, white, qt_enum('ItemDataRole', 'BackgroundRole'))
 
         current = translations.get_current_language()
         idx = self.language_combo.findData(current)
@@ -134,10 +148,21 @@ class HeaderWidget(QFrame):
         lang_layout.addWidget(self.language_combo)
         layout.addWidget(lang_container)
 
+    def language_code_at(self, index):
+        """Return the canonical code for a language combo index."""
+        try:
+            index = int(index)
+        except (TypeError, ValueError):
+            return None
+        if 0 <= index < len(self._language_codes):
+            return self._language_codes[index]
+        return None
+
     def _createDonationButton(self, layout):
         self.donation_button = ModernButton(
             "☕ {0}".format(translations.get_text('header_support')))
-        self.donation_button.setFixedSize(130, 32)
+        self.donation_button.setMinimumWidth(130)
+        self.donation_button.setMinimumHeight(32)
         self.donation_button.setToolTip("❤️ " + translations.get_text('support_tip'))
         self.donation_button.setStyleSheet("""
             QPushButton {
@@ -161,7 +186,8 @@ class HeaderWidget(QFrame):
     def _createAuthorButton(self, layout):
         self.author_button = ModernButton(
             "👤 {0}".format(translations.get_text('header_about_author')))
-        self.author_button.setFixedSize(120, 32)
+        self.author_button.setMinimumWidth(120)
+        self.author_button.setMinimumHeight(32)
         self.author_button.setToolTip("📝 " + translations.get_text('author_tip'))
         self.author_button.setStyleSheet("""
             QPushButton {
@@ -177,6 +203,14 @@ class HeaderWidget(QFrame):
             }
         """)
         layout.addWidget(self.author_button)
+
+    def retranslateUi(self):
+        t = translations.get_text
+        self.title_label.setText('🛰️ ' + t('window_title'))
+        self.donation_button.setText('☕ ' + t('header_support'))
+        self.donation_button.setToolTip('❤️ ' + t('support_tip'))
+        self.author_button.setText('👤 ' + t('header_about_author'))
+        self.author_button.setToolTip('📝 ' + t('author_tip'))
 
 
 class ControlButtonsWidget(QWidget):
@@ -200,6 +234,13 @@ class ControlButtonsWidget(QWidget):
         layout.addWidget(self.cancel_button)
         layout.addWidget(self.clear_log_button)
 
+    def retranslateUi(self):
+        t = translations.get_text
+        self.build_button.setText('🚀 ' + t('build_graph'))
+        self.test_button.setText('🧪 ' + t('test_run'))
+        self.cancel_button.setText('❌ ' + t('cancel'))
+        self.clear_log_button.setText('🧹 ' + t('clear_logs'))
+
 
 class LogTextWidget(QTextEdit):
     """Лог выполнения (только чтение)."""
@@ -221,9 +262,17 @@ class ResultsTableWidget(QTableWidget):
             "📊 {0}".format(t('col_status')),
             "💬 {0}".format(t('col_message')),
         ])
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.horizontalHeader().setSectionResizeMode(
+            qt_class_enum(QHeaderView, 'ResizeMode', 'Stretch'))
         self.verticalHeader().setVisible(False)
-        self.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.setEditTriggers(qt_class_enum(
+            QAbstractItemView, 'EditTrigger', 'NoEditTriggers'))
+
+    def retranslateUi(self):
+        t = translations.get_text
+        self.setHorizontalHeaderLabels([
+            '📄 ' + t('col_stage'), '📊 ' + t('col_status'),
+            '💬 ' + t('col_message')])
 
 
 class PlaceholderTab(QWidget):
@@ -244,7 +293,7 @@ class PlaceholderTab(QWidget):
         badge.setStyleSheet(
             "color: #e67e22; font-weight: bold; background: #fef5e7; "
             "border: 1px solid #f5cba7; border-radius: 6px; padding: 6px 10px;")
-        badge.setAlignment(Qt.AlignLeft)
+        badge.setAlignment(qt_enum('AlignmentFlag', 'AlignLeft'))
 
         layout.addWidget(head)
         layout.addWidget(badge)
@@ -265,10 +314,11 @@ class DependenciesWidget(QWidget):
         self.intro_label = create_info_label(t('deps_intro'))
 
         # Способ установки
-        method_group = QGroupBox()
-        method_layout = QHBoxLayout(method_group)
-        method_layout.addWidget(QLabel(t('deps_install_method')))
-        self.method_combo = QComboBox()
+        self.method_group = QGroupBox()
+        method_layout = QHBoxLayout(self.method_group)
+        self.method_label = QLabel(t('deps_install_method'))
+        method_layout.addWidget(self.method_label)
+        self.method_combo = StyledComboBox()
         for key, code in (('deps_method_auto', 'auto'),
                           ('deps_method_pip', 'pip'),
                           ('deps_method_wheels', 'wheels'),
@@ -281,10 +331,13 @@ class DependenciesWidget(QWidget):
         self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels([
             t('deps_col_package'), t('deps_col_purpose'), t('deps_col_status')])
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(
+            qt_class_enum(QHeaderView, 'ResizeMode', 'Stretch'))
         self.table.verticalHeader().setVisible(False)
-        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setEditTriggers(qt_class_enum(
+            QAbstractItemView, 'EditTrigger', 'NoEditTriggers'))
+        self.table.setSelectionBehavior(qt_class_enum(
+            QAbstractItemView, 'SelectionBehavior', 'SelectRows'))
 
         # Кнопки
         buttons = QHBoxLayout()
@@ -297,30 +350,53 @@ class DependenciesWidget(QWidget):
         buttons.addStretch()
 
         layout.addWidget(self.intro_label)
-        layout.addWidget(method_group)
+        layout.addWidget(self.method_group)
         layout.addWidget(self.table, 1)
         layout.addLayout(buttons)
 
         self.refresh()
 
+    def retranslateUi(self):
+        t = translations.get_text
+        self.intro_label.setText(t('deps_intro'))
+        self.method_label.setText(t('deps_install_method'))
+        retranslate_combo(self.method_combo, (
+            ('deps_method_auto', 'auto'), ('deps_method_pip', 'pip'),
+            ('deps_method_wheels', 'wheels'), ('deps_method_folder', 'folder')))
+        self.table.setHorizontalHeaderLabels([
+            t('deps_col_package'), t('deps_col_purpose'), t('deps_col_status')])
+        self.install_button.setText('⬇️ ' + t('deps_install_selected'))
+        self.recheck_button.setText('🔄 ' + t('deps_recheck'))
+        for row in range(self.table.rowCount()):
+            purpose_item = self.table.item(row, 1)
+            status_item = self.table.item(row, 2)
+            if purpose_item is None or status_item is None:
+                continue
+            purpose_key = purpose_item.data(PACKAGE_PURPOSE_ROLE)
+            installed = bool(status_item.data(PACKAGE_INSTALLED_ROLE))
+            purpose, status = dependency_row_text(purpose_key, installed)
+            purpose_item.setText(purpose)
+            status_item.setText(status)
+
     def refresh(self):
         """Перечитать статус пакетов и перерисовать таблицу."""
         from ..core.deps import installer
-        t = translations.get_text
         rows = installer.package_status()
         self.table.setRowCount(len(rows))
         for r, (name, _import_name, purpose_key, installed) in enumerate(rows):
             name_item = _Item(name)
             # чекбокс для выбора устанавливаемых
-            name_item.setFlags(name_item.flags() | Qt.ItemIsUserCheckable)
-            name_item.setCheckState(Qt.Unchecked if installed else Qt.Checked)
-            name_item.setData(Qt.UserRole, name)
+            name_item.setFlags(
+                name_item.flags() | qt_enum('ItemFlag', 'ItemIsUserCheckable'))
+            name_item.setCheckState(
+                qt_enum('CheckState', 'Unchecked' if installed else 'Checked'))
+            name_item.setData(qt_enum('ItemDataRole', 'UserRole'), name)
 
-            purpose_item = QTableWidgetItem(t(purpose_key))
-            status_text = (t('deps_status_installed') if installed
-                           else t('deps_status_missing'))
-            status_item = QTableWidgetItem(
-                ("✅ " if installed else "⬜ ") + status_text)
+            purpose, status = dependency_row_text(purpose_key, installed)
+            purpose_item = QTableWidgetItem(purpose)
+            purpose_item.setData(PACKAGE_PURPOSE_ROLE, purpose_key)
+            status_item = QTableWidgetItem(status)
+            status_item.setData(PACKAGE_INSTALLED_ROLE, installed)
             status_item.setForeground(
                 QColor('#27ae60') if installed else QColor('#e67e22'))
 
@@ -334,8 +410,9 @@ class DependenciesWidget(QWidget):
         specs = []
         for r in range(self.table.rowCount()):
             item = self.table.item(r, 0)
-            if item is not None and item.checkState() == Qt.Checked:
-                name = item.data(Qt.UserRole)
+            if item is not None and item.checkState() == qt_enum(
+                    'CheckState', 'Checked'):
+                name = item.data(qt_enum('ItemDataRole', 'UserRole'))
                 cfg = installer.PACKAGES.get(name)
                 if cfg:
                     specs.append((name, cfg))

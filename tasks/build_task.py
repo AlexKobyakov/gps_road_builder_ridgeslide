@@ -15,7 +15,9 @@ Year: 2026
 """
 
 from qgis.PyQt.QtCore import pyqtSignal
-from qgis.core import QgsTask, QgsMessageLog, Qgis
+from qgis.core import QgsTask, QgsMessageLog
+
+from ..qgis_compat import qgis_enum, task_can_cancel
 
 MESSAGE_CATEGORY = 'GPS Road Builder'
 
@@ -34,7 +36,7 @@ class BuildRoadGraphTask(QgsTask):
     progressMessage = pyqtSignal(float, str)
 
     def __init__(self, description, params=None):
-        super().__init__(description, QgsTask.CanCancel)
+        super().__init__(description, task_can_cancel())
         self.params = dict(params or {})
         self.result_payload = None
         self.exception = None
@@ -159,8 +161,12 @@ class BuildRoadGraphTask(QgsTask):
         if self.exception is not None:
             QgsMessageLog.logMessage(
                 'Build failed: {0}'.format(self.exception),
-                MESSAGE_CATEGORY, Qgis.Critical)
+                MESSAGE_CATEGORY, qgis_enum('MessageLevel', 'Critical'))
         elif not result:
-            QgsMessageLog.logMessage('Build cancelled', MESSAGE_CATEGORY, Qgis.Info)
+            QgsMessageLog.logMessage(
+                'Build cancelled', MESSAGE_CATEGORY,
+                qgis_enum('MessageLevel', 'Info'))
         else:
-            QgsMessageLog.logMessage('Build finished', MESSAGE_CATEGORY, Qgis.Info)
+            QgsMessageLog.logMessage(
+                'Build finished', MESSAGE_CATEGORY,
+                qgis_enum('MessageLevel', 'Info'))

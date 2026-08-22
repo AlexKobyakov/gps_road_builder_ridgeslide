@@ -8,11 +8,12 @@ Email: kobyakov@lesburo.ru
 Year: 2026
 """
 
-from qgis.PyQt.QtCore import Qt, QUrl
+from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QFrame
 
 from ..translation_manager import translations
+from ..qgis_compat import qt_enum
 
 
 class SimpleDonationDialog(QDialog):
@@ -21,17 +22,19 @@ class SimpleDonationDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(translations.get_text('donation_title'))
-        self.setFixedSize(500, 400)
+        self.setMinimumSize(500, 400)
+        self.resize(500, 400)
         self.setModal(True)
         self.setupUi()
+        self.retranslateUi()
 
     def setupUi(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(25, 25, 25, 25)
         layout.setSpacing(20)
 
-        title = QLabel(translations.get_text('donation_window_title'))
-        title.setStyleSheet("""
+        self.title_label = QLabel()
+        self.title_label.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
                 font-size: 18px;
@@ -40,12 +43,12 @@ class SimpleDonationDialog(QDialog):
                 padding: 10px;
             }
         """)
-        title.setAlignment(Qt.AlignCenter)
+        self.title_label.setAlignment(qt_enum('AlignmentFlag', 'AlignCenter'))
 
-        description = QLabel(translations.get_text('donation_description'))
-        description.setWordWrap(True)
-        description.setTextFormat(Qt.RichText)
-        description.setStyleSheet("""
+        self.description_label = QLabel()
+        self.description_label.setWordWrap(True)
+        self.description_label.setTextFormat(qt_enum('TextFormat', 'RichText'))
+        self.description_label.setStyleSheet("""
             QLabel {
                 background-color: #f8f9fa;
                 border: 1px solid #dee2e6;
@@ -59,30 +62,39 @@ class SimpleDonationDialog(QDialog):
         buttons_layout = QVBoxLayout(buttons_frame)
         buttons_layout.setSpacing(10)
 
-        kofi_button = QPushButton(translations.get_text('donation_kofi'))
-        kofi_button.setStyleSheet(self._button_style('#f45d22', '#e55a1f', 'white'))
-        kofi_button.clicked.connect(self.openKofi)
+        self.kofi_button = QPushButton()
+        self.kofi_button.setStyleSheet(self._button_style('#f45d22', '#e55a1f', 'white'))
+        self.kofi_button.clicked.connect(self.openKofi)
 
-        tbank_button = QPushButton(translations.get_text('donation_tbank'))
-        tbank_button.setStyleSheet(self._button_style('#ffdd2d', '#f5d000', '#333'))
-        tbank_button.clicked.connect(self.openTBank)
+        self.tbank_button = QPushButton()
+        self.tbank_button.setStyleSheet(self._button_style('#ffdd2d', '#f5d000', '#333'))
+        self.tbank_button.clicked.connect(self.openTBank)
 
-        github_button = QPushButton(translations.get_text('donation_github'))
-        github_button.setStyleSheet(self._button_style('#24292e', '#1b1f23', 'white'))
-        github_button.clicked.connect(self.openGitHub)
+        self.github_button = QPushButton()
+        self.github_button.setStyleSheet(self._button_style('#24292e', '#1b1f23', 'white'))
+        self.github_button.clicked.connect(self.openGitHub)
 
-        buttons_layout.addWidget(kofi_button)
-        buttons_layout.addWidget(tbank_button)
-        buttons_layout.addWidget(github_button)
+        buttons_layout.addWidget(self.kofi_button)
+        buttons_layout.addWidget(self.tbank_button)
+        buttons_layout.addWidget(self.github_button)
 
         # Кнопка «может позже» убрана (ADD4 п.6): пользователь либо жертвует, либо
         # закрывает окно системным крестиком.
-        layout.addWidget(title)
-        layout.addWidget(description)
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.description_label)
         layout.addWidget(buttons_frame)
         layout.addStretch()
 
         self.setStyleSheet("QDialog { background-color: white; border-radius: 10px; }")
+
+    def retranslateUi(self):
+        t = translations.get_text
+        self.setWindowTitle(t('donation_title'))
+        self.title_label.setText(t('donation_window_title'))
+        self.description_label.setText(t('donation_description'))
+        self.kofi_button.setText(t('donation_kofi'))
+        self.tbank_button.setText(t('donation_tbank'))
+        self.github_button.setText(t('donation_github'))
 
     @staticmethod
     def _button_style(bg, hover, fg):

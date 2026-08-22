@@ -21,7 +21,8 @@ Year: 2026
 
 import importlib.util
 import os
-import subprocess  # nosec B404 - used only to run the QGIS python's own pip
+# subprocess is used only to run the QGIS Python's own pip.
+import subprocess  # nosec B404
 import sys
 import urllib.parse
 import urllib.request
@@ -36,10 +37,17 @@ ALLOWED_SCHEMES = ('http', 'https')
 #   import_name : имя для проверки `import`
 #   pip_spec    : спецификатор для pip
 #   purpose_key : ключ перевода назначения
-#   optional    : всегда True в Фазе 0 (все ускорители необязательны)
+#   optional    : False для минимально необходимой библиотеки pipeline
 #   wheel_bundles: словарь platform_tag -> список URL-зеркал с zip колёс
 #                  (заполняется мейнтейнером; пусто = способ B недоступен)
 PACKAGES = {
+    'pandas': {
+        'import_name': 'pandas',
+        'pip_spec': 'pandas',
+        'purpose_key': 'deps_purpose_pandas',
+        'optional': False,
+        'wheel_bundles': {},
+    },
     'numba': {
         'import_name': 'numba',
         'pip_spec': 'numba',
@@ -75,11 +83,35 @@ PACKAGES = {
 # libs-каталог плагина и sys.path
 # ---------------------------------------------------------------------------
 
+def runtime_tag(qgis_version=None, py_version=None):
+    """Return a dependency target tag for the current QGIS/Python ABI.
+
+    Wheels such as numba, numpy and scikit-image cannot be shared safely by
+    QGIS 3 and QGIS 4, even when both use the same user profile.  Keeping the
+    major QGIS version and Python major/minor in the target path prevents a
+    binary installed by one application from being imported by the other.
+    """
+    if py_version is None:
+        py_version = sys.version_info[:2]
+    if qgis_version is None:
+        try:
+            from qgis.core import Qgis
+            qgis_version = Qgis.versionInt()
+        except Exception:
+            qgis_version = 0
+    try:
+        qgis_major = int(qgis_version) // 10000
+    except (TypeError, ValueError):
+        qgis_major = 0
+    qgis_part = 'qgis{0}'.format(qgis_major or 'unknown')
+    return '{0}-py{1}{2}'.format(qgis_part, py_version[0], py_version[1])
+
+
 def libs_dir():
     """Каталог для доустановленных библиотек внутри профиля QGIS.
 
-    В обычном режиме — `<профиль QGIS>/gps_road_builder/libs`. Вне QGIS
-    (например, в тестах) — `<домашний>/.gps_road_builder/libs`.
+    В обычном режиме — `<профиль QGIS>/gps_road_builder/libs/<runtime-tag>`.
+    Вне QGIS (например, в тестах) — `<домашний>/.gps_road_builder/libs/...`.
     """
     base = None
     try:
@@ -89,7 +121,7 @@ def libs_dir():
         base = None
     if not base:
         base = os.path.join(os.path.expanduser('~'), '.gps_road_builder')
-    path = os.path.join(base, 'gps_road_builder', 'libs')
+    path = os.path.join(base, 'gps_road_builder', 'libs', runtime_tag())
     os.makedirs(path, exist_ok=True)
     return path
 
@@ -127,38 +159,120 @@ def package_status():
     return result
 
 
-def python_executable():
+def _python_candidates(executable):
+    """Yield plausible QGIS Python paths without consulting PATH.
+
+    OSGeo4W may start QGIS from ``apps/qgis/bin/qgis.exe``, while its Python
+    is at the installation root in ``bin/python3.exe``.  Searching only next
+    to ``sys.executable`` therefore incorrectly reports that pip is absent.
+    """
+    names = ('python3.exe', 'python.exe', 'python3', 'python')
+    folder = os.path.dirname(os.path.abspath(executable))
+    seen = set()
+    for _level in range(6):
+        for base in (folder, os.path.join(folder, 'bin')):
+            for name in names:
+                candidate = os.path.join(base, name)
+                if candidate not in seen:
+                    seen.add(candidate)
+                    yield candidate
+        parent = os.path.dirname(folder)
+        if parent == folder:
+            break
+        folder = parent
+
+
+def python_executable(executable=None):
     """Лучшее приближение к интерпретатору Python для запуска pip.
 
     В QGIS `sys.executable` иногда указывает на исполняемый файл приложения
     (Windows/OSGeo4W), а не на python. Пытаемся найти python рядом.
     """
-    exe = sys.executable or ''
+    exe = executable or sys.executable or ''
     if exe and os.path.basename(exe).lower().startswith('python'):
         return exe
-    # Ищем python в каталоге текущего исполняемого файла
     if exe:
-        folder = os.path.dirname(exe)
-        for cand in ('python3', 'python', 'python3.exe', 'python.exe'):
-            p = os.path.join(folder, cand)
-            if os.path.isfile(p):
-                return p
+        for candidate in _python_candidates(exe):
+            if os.path.isfile(candidate):
+                return candidate
     return exe or 'python'
+
+
+def _pip_available(python, env=None):
+    """Check pip without modifying the QGIS Python installation."""
+    try:
+        # No shell: fixed interpreter and ``-m pip`` arguments,
+        # пользовательского ввода в команде нет.
+        proc = subprocess.run(  # nosec B603
+            [python, '-m', 'pip', '--version'],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            timeout=30, env=env, **_no_window())
+        return proc.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def pip_available(python=None):
     """Доступен ли `pip` в интерпретаторе QGIS."""
+    return _pip_available(python or python_executable())
+
+
+def ensurepip_available(python=None):
+    """Can this QGIS Python bootstrap pip without touching the system site?"""
     python = python or python_executable()
     try:
-        # nosec B603: не shell, аргументы фиксированы (интерпретатор + `-m pip`),
-        # пользовательского ввода в команде нет.
         proc = subprocess.run(  # nosec B603
-            [python, '-m', 'pip', '--version'],
+            [python, '-m', 'ensurepip', '--version'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             timeout=30, **_no_window())
         return proc.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+def _pip_site_packages(root):
+    """Locate the private site-packages created by ``ensurepip --root``."""
+    for folder, _dirs, files in os.walk(root):
+        if 'pip' in _dirs and os.path.isfile(
+                os.path.join(folder, 'pip', '__init__.py')):
+            return folder
+    return None
+
+
+def pip_environment(python=None, target=None):
+    """Return ``(python, env)`` with usable pip, bootstrapping it privately.
+
+    The fallback runs only after the user presses Install.  ``ensurepip`` is
+    invoked with ``--root`` below the plugin profile, so it never writes QGIS'
+    system site-packages.  The private site-packages is supplied only to the
+    child pip process via ``PYTHONPATH``.
+    """
+    python = python or python_executable()
+    if _pip_available(python):
+        return python, None
+    if not ensurepip_available(python):
+        raise RuntimeError('pip and ensurepip are unavailable in the QGIS Python')
+
+    target = target or libs_dir()
+    root = os.path.join(target, '_pip_bootstrap')
+    os.makedirs(root, exist_ok=True)
+    proc = subprocess.run(  # nosec B603
+        [python, '-m', 'ensurepip', '--root', root, '--upgrade'],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        timeout=120, **_no_window())
+    if proc.returncode != 0:
+        output = proc.stdout.decode(errors='replace') if isinstance(
+            proc.stdout, bytes) else (proc.stdout or '')
+        raise RuntimeError('ensurepip failed: {0}'.format(output.strip()))
+    site_packages = _pip_site_packages(root)
+    if not site_packages:
+        raise RuntimeError('ensurepip did not create a private pip package')
+    env = os.environ.copy()
+    old_path = env.get('PYTHONPATH')
+    env['PYTHONPATH'] = site_packages + (os.pathsep + old_path if old_path else '')
+    if not _pip_available(python, env):
+        raise RuntimeError('private pip bootstrap could not be started')
+    return python, env
 
 
 # ---------------------------------------------------------------------------
@@ -271,13 +385,13 @@ def _no_window():
     return {}
 
 
-def _run_pip(cmd, progress_cb=None, cancelled_cb=None):
+def _run_pip(cmd, progress_cb=None, cancelled_cb=None, env=None):
     """Запустить pip, транслируя вывод в progress_cb; поддержка отмены."""
-    # nosec B603: не shell; `cmd` собирается плагином (интерпретатор + pip +
+    # No shell; ``cmd`` is assembled by the plugin (interpreter + pip +
     # имена пакетов из реестра PACKAGES), не из произвольного ввода пользователя.
     proc = subprocess.Popen(  # nosec B603
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1, **_no_window())
+        text=True, bufsize=1, env=env, **_no_window())
     try:
         for line in iter(proc.stdout.readline, ''):
             if cancelled_cb and cancelled_cb():
@@ -296,8 +410,9 @@ def install_via_pip(specs, target=None, progress_cb=None, cancelled_cb=None,
                     python=None):
     """Backend A: установка из PyPI в libs-каталог плагина."""
     target = target or libs_dir()
+    python, env = pip_environment(python=python, target=target)
     cmd = build_pip_command(specs, target, python=python)
-    _run_pip(cmd, progress_cb, cancelled_cb)
+    _run_pip(cmd, progress_cb, cancelled_cb, env=env)
     ensure_on_path(target)
     return target
 
@@ -306,9 +421,10 @@ def install_from_folder(specs, folder, target=None, progress_cb=None,
                         cancelled_cb=None, python=None):
     """Backend C: установка из локальной папки с колёсами (оффлайн)."""
     target = target or libs_dir()
+    python, env = pip_environment(python=python, target=target)
     cmd = build_pip_command(specs, target, python=python,
                             find_links=folder, no_index=True)
-    _run_pip(cmd, progress_cb, cancelled_cb)
+    _run_pip(cmd, progress_cb, cancelled_cb, env=env)
     ensure_on_path(target)
     return target
 

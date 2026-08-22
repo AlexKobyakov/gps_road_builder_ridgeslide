@@ -61,6 +61,8 @@ class InstallWorker(QObject):
             return self.method
         if installer.pip_available():
             return 'pip'
+        if installer.ensurepip_available():
+            return 'pip'
         if self.wheel_urls:
             return 'wheels'
         if self.folder:

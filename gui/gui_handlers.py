@@ -12,12 +12,13 @@ Year: 2026
 import os
 import time
 
-from qgis.PyQt.QtCore import Qt, QThread
+from qgis.PyQt.QtCore import QThread
 from qgis.PyQt.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem, QTableWidgetItem
 from qgis.core import QgsApplication
 
 from ..translation_manager import translations
 from ..core.settings_manager import SettingsManager, DEFAULTS
+from ..qgis_compat import qgis_enum, qt_enum
 
 
 class GuiEventHandlers:
@@ -48,18 +49,21 @@ class GuiEventHandlers:
     # ------------------------------------------------------------------
 
     def onLanguageChanged(self, _index):
-        code = self.dialog.header.language_combo.currentData()
+        code = self.dialog.header.language_code_at(_index)
+        if code is None:
+            # Defensive fallback for Qt bindings that deliver a text overload.
+            code = self.dialog.header.language_code_at(
+                self.dialog.header.language_combo.currentIndex())
         if code and translations.set_language(code):
             self.settings.set('language', code)
-            self.dialog.retranslateUi()
 
     def showDonation(self):
         from .simple_donation import SimpleDonationDialog
-        SimpleDonationDialog(self.dialog).exec_()
+        SimpleDonationDialog(self.dialog).exec()
 
     def showAuthorInfo(self):
         from .gui_dialogs import AuthorInfoDialog
-        AuthorInfoDialog(self.dialog).exec_()
+        AuthorInfoDialog(self.dialog).exec()
 
     def clearLogs(self):
         self.dialog.log_text.clear()
@@ -161,12 +165,15 @@ class GuiEventHandlers:
             if not hasattr(layer, 'geometryType'):
                 continue
             gtype = layer.geometryType()
-            if gtype == QgsWkbTypes.PolygonGeometry:
+            if gtype == qgis_enum(
+                    'GeometryType', 'Polygon', QgsWkbTypes, 'PolygonGeometry'):
                 aoi_combo.addItem(layer.name(), layer.id())
-            elif gtype == QgsWkbTypes.LineGeometry:
+            elif gtype == qgis_enum(
+                    'GeometryType', 'Line', QgsWkbTypes, 'LineGeometry'):
                 line_combo.addItem(layer.name(), layer.id())
                 input_combo.addItem(layer.name(), layer.id())
-            elif gtype == QgsWkbTypes.PointGeometry:
+            elif gtype == qgis_enum(
+                    'GeometryType', 'Point', QgsWkbTypes, 'PointGeometry'):
                 input_combo.addItem(layer.name(), layer.id())
 
     def _load_aoi_polygon(self, values):
@@ -206,12 +213,11 @@ class GuiEventHandlers:
         files = csv_reader.iter_data_files(folder)
         for month, path in files:
             item = QListWidgetItem('{0} / {1}'.format(month, os.path.basename(path)))
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked)
-            item.setData(Qt.UserRole, path)
+            item.setFlags(item.flags() | qt_enum('ItemFlag', 'ItemIsUserCheckable'))
+            item.setCheckState(qt_enum('CheckState', 'Checked'))
+            item.setData(qt_enum('ItemDataRole', 'UserRole'), path)
             lst.addItem(item)
-        self.dialog.data_tab.info_label.setText(
-            translations.get_text('data_files_found').format(len(files)))
+        self.dialog.data_tab.set_files_found(len(files))
 
     def browseExport(self):
         t = translations.get_text
@@ -250,8 +256,8 @@ class GuiEventHandlers:
         paths = []
         for i in range(lst.count()):
             item = lst.item(i)
-            if item.checkState() == Qt.Checked:
-                paths.append(item.data(Qt.UserRole))
+            if item.checkState() == qt_enum('CheckState', 'Checked'):
+                paths.append(item.data(qt_enum('ItemDataRole', 'UserRole')))
         return paths
 
     # ------------------------------------------------------------------
@@ -377,11 +383,14 @@ class GuiEventHandlers:
         seconds = int(max(0, seconds))
         h, rem = divmod(seconds, 3600)
         m, s = divmod(rem, 60)
+        t = translations.get_text
         if h:
-            return '{0}ч {1}м'.format(h, m)
+            return '{0} {1}'.format(
+                t('duration_hours').format(h), t('duration_minutes').format(m))
         if m:
-            return '{0}м {1}с'.format(m, s)
-        return '{0}с'.format(s)
+            return '{0} {1}'.format(
+                t('duration_minutes').format(m), t('duration_seconds').format(s))
+        return t('duration_seconds').format(s)
 
     def _on_completed(self):
         t = translations.get_text
@@ -395,7 +404,7 @@ class GuiEventHandlers:
         if result.get('partial'):
             # Остановка после этапа (пошаговый режим): слой не строим.
             self.dialog.log_message('⏸️ {0}: {1}'.format(
-                t('stopped_after'), result.get('stage', '')))
+                t('stopped_after'), t('stage_' + result.get('stage', 'none'))))
             self._fill_results(stats)
             return
         self.dialog.log_message(
@@ -417,7 +426,7 @@ class GuiEventHandlers:
             from .gui_dialogs import ErrorDialog
             self.dialog.log_message('❌ ' + t('build_failed'))
             ErrorDialog(t('error'), t('build_failed'),
-                        details=str(task.exception), parent=self.dialog).exec_()
+                        details=str(task.exception), parent=self.dialog).exec()
         else:
             self.dialog.log_message('⚠️ ' + t('build_cancelled'))
 
@@ -428,6 +437,7 @@ class GuiEventHandlers:
             '📊 ' + translations.get_text('progress'))
 
     def _fill_results(self, stats):
+        t = translations.get_text
         table = self.dialog.results_table
         rows = [
             ('input', stats.get('input', 0)),
@@ -441,9 +451,18 @@ class GuiEventHandlers:
         ]
         table.setRowCount(len(rows))
         for r, (key, value) in enumerate(rows):
-            table.setItem(r, 0, QTableWidgetItem(str(key)))
-            table.setItem(r, 1, QTableWidgetItem('OK'))
+            table.setItem(r, 0, QTableWidgetItem(t('metric_' + key)))
+            table.setItem(r, 1, QTableWidgetItem(t('status_ok')))
             table.setItem(r, 2, QTableWidgetItem(str(value)))
+
+    def retranslateResults(self):
+        """Refresh result labels without changing the computed result."""
+        if self.last_result:
+            stats = self.last_result.get('stats', {})
+            self._fill_results(stats)
+            graph = self.last_result.get('graph')
+            if graph is not None:
+                self._fill_overview(graph, stats)
 
     def _fill_overview(self, graph, stats):
         from ..core.io import features
@@ -505,7 +524,8 @@ class GuiEventHandlers:
                 with open(runs_manifest_path(), 'a', encoding='utf-8') as fh:
                     fh.write(run_log.manifest_line(
                         'post', params, stats) + '\n')
-            except Exception:  # nosec B110 - best-effort manifest write, ignore failure
+            # A manifest failure must not hide the completed result from the UI.
+            except Exception:  # nosec B110
                 pass
             self.dialog.log_message('✨ {0}: {1} {2}, {3} {4}'.format(
                 t('pt_done'), stats.get('edges', 0), t('result_edges'),
@@ -524,28 +544,14 @@ class GuiEventHandlers:
             return res['graph'], res['projector']
         # source == 'layer': прочитать слой линий и спроецировать в метрику
         from qgis.core import QgsProject
-        from ..core.density import projection
-        from ..core.graph import simplify as simplify_mod
         from . import layers
-        import numpy as np
         lid = self.dialog.postprocess_tab.layer_combo.currentData()
         layer = QgsProject.instance().mapLayer(lid) if lid else None
         if layer is None:
             return None, None
-        g = layers.graph_from_layer(layer)
+        g, projector = layers.metric_graph_from_feature_source(layer)
         if not g.nodes:
             return None, None
-        lons = np.array([xy[0] for xy in g.nodes.values()], dtype=float)
-        lats = np.array([xy[1] for xy in g.nodes.values()], dtype=float)
-        projector = projection.Projector.for_data(lons, lats)
-        for nid, (lon, lat) in list(g.nodes.items()):
-            x, y = projector.forward(np.array([lon]), np.array([lat]))
-            g.nodes[nid] = (float(x[0]), float(y[0]))
-        for e in g.edges:
-            ll = e['coords_lonlat']
-            x, y = projector.forward(ll[:, 0], ll[:, 1])
-            e['coords'] = np.column_stack([x, y])
-            e['length'] = simplify_mod.polyline_length(e['coords'])
         return g, projector
 
     def _maybe_add_layer(self, graph):
@@ -591,11 +597,15 @@ class GuiEventHandlers:
 
         wheel_urls, folder = [], None
         if method in ('auto', 'pip') and not installer.pip_available():
-            if method == 'pip':
+            can_bootstrap = installer.ensurepip_available()
+            if can_bootstrap:
+                method = 'pip'
+            elif method == 'pip':
                 QMessageBox.warning(self.dialog, t('warning'),
                                     t('deps_pip_unavailable'))
                 return
-            method = 'wheels'
+            else:
+                method = 'wheels'
         if method == 'wheels':
             for _name, cfg in selected:
                 for urls in cfg.get('wheel_bundles', {}).values():
@@ -630,7 +640,7 @@ class GuiEventHandlers:
         self.install_worker.finished.connect(on_finished)
         self.install_thread.start()
         self.dialog.log_message('📥 ' + t('deps_installing').format(names))
-        progress.exec_()
+        progress.exec()
 
         if 'success' not in result:
             self.install_worker.cancel()
@@ -647,4 +657,4 @@ class GuiEventHandlers:
             if payload and payload != 'cancelled':
                 self.dialog.log_message('❌ ' + t('deps_install_failed').format(names))
                 ErrorDialog(t('error'), t('deps_install_failed').format(names),
-                            details=payload, parent=self.dialog).exec_()
+                            details=payload, parent=self.dialog).exec()

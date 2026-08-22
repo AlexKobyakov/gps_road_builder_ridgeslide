@@ -9,11 +9,12 @@ Email: kobyakov@lesburo.ru
 Year: 2026
 """
 
-from qgis.PyQt.QtCore import Qt, QSize
+from qgis.PyQt.QtCore import QSize
 from qgis.PyQt.QtGui import QPainter, QColor, QBrush
 from qgis.PyQt.QtWidgets import QWidget
 
 from ..core import histogram as hist_core
+from ..qgis_compat import qt_class_enum, qt_enum
 
 
 class HistogramWidget(QWidget):
@@ -47,7 +48,8 @@ class HistogramWidget(QWidget):
 
     def paintEvent(self, _event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(qt_class_enum(
+            QPainter, 'RenderHint', 'Antialiasing'))
         w = self.width()
         h = self.height()
         painter.fillRect(0, 0, w, h, QColor('#ffffff'))
@@ -70,7 +72,7 @@ class HistogramWidget(QWidget):
         avail_h = h - top - pad - label_h
         bar_w = max(1.0, avail_w / n)
         painter.setBrush(QBrush(QColor('#3498db')))
-        painter.setPen(Qt.NoPen)
+        painter.setPen(qt_enum('PenStyle', 'NoPen'))
         for i, c in enumerate(self._counts):
             bh = (c / max_c) * avail_h
             x = pad + i * bar_w

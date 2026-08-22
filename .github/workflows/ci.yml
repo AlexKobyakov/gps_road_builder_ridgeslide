@@ -7,6 +7,32 @@ on:
     branches: [ main ]
 
 jobs:
+  qt6-checker:
+    name: PyQGIS 4 checker (Qt6)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    container:
+      image: ghcr.io/qgis/pyqgis4-checker:main-ubuntu
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Report Qt6 incompatibilities without modifying sources
+        run: pyqt5_to_pyqt6.py --dry_run --logfile pyqt6_checker.log .
+
+      - name: Fail when the checker would rewrite a source file
+        run: |
+          pyqt5_to_pyqt6.py .
+          git diff --exit-code
+
+      - name: Upload checker report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pyqgis4-checker-report
+          path: pyqt6_checker.log
+          retention-days: 7
+
   test:
     name: Lint & offline tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
@@ -39,6 +65,9 @@ jobs:
       - name: Lint (full — informational)
         continue-on-error: true
         run: flake8 . --count --statistics
+
+      - name: Security scan (Bandit — matches the QGIS plugin-repo upload check)
+        run: bandit -r core gui tasks translations plugin.py translation_manager.py __init__.py
 
       - name: Run offline unit tests
         run: pytest -v

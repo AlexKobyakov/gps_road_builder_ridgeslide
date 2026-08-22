@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexKobyakov/gps_road_builder_ridgeslide/actions/workflows/ci.yml)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-![QGIS 3.22+](https://img.shields.io/badge/QGIS-3.22%2B%20(3.x)-589632.svg)
-![Version](https://img.shields.io/badge/version-1.0.2-informational.svg)
+![QGIS 3.22+](https://img.shields.io/badge/QGIS-3.22%2B%20(3.x--4.x)-589632.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-informational.svg)
 ![Tests](https://img.shields.io/badge/tests-207%20offline-success.svg)
 
 **A QGIS plugin that reconstructs a connected road/path network (a graph) from
@@ -74,16 +74,21 @@ See **[ALGORITHMS.md](ALGORITHMS.md)** for the full algorithm list and details.
 - **Transparent** — the run log records every setting and per‑stage metric; a
   per‑run manifest (`gps_road_builder_runs.jsonl`) lets you diff runs while tuning.
 - **Export** — GeoJSON, GraphML, Shapefile, GeoPackage.
+- **Processing Toolbox** — three reproducible algorithms (build from a project
+  layer, build from a CSV/XLSX folder, and post-process a line network) with
+  standard EPSG:4326 feature sinks. Their stable IDs are suitable for scripts,
+  Batch Processing and Model Designer.
 - **On‑demand dependencies** — `numba`, `scikit‑image` etc. are installed only
-  when you ask, from a dialog. No silent auto‑install. Interface in **RU and EN**.
+  when you ask, from a dialog. No silent auto‑install. Interface in **12
+  languages**: RU, EN, 中文, हिन्दी, Español, العربية, Français, Português,
+  Deutsch, Bahasa Indonesia, ไทย and Tiếng Việt.
 
 ---
 
 ## Requirements
 
-- **QGIS 3.22+ — the whole 3.x branch** (Qt5), Windows or Linux. Tested up to
-  **QGIS 3.44 “Solothurn”**. QGIS **4.x (Qt6)** needs separate work and is not
-  supported yet.
+- **QGIS 3.22+ — the whole 3.x branch** (Qt5), Windows or Linux, and QGIS 4.x
+  (Qt6). Manually verified in **QGIS 3.44 “Solothurn”** and **QGIS 4.2**.
 - Uses libraries shipped with QGIS: `numpy`, `scipy`, `shapely`, `pyproj`,
   `pandas`.
 - Optional accelerators, installable from the **Dependencies** tab:
@@ -93,7 +98,7 @@ See **[ALGORITHMS.md](ALGORITHMS.md)** for the full algorithm list and details.
 ## Installation
 
 1. Build the plugin zip: `python scripts/build_plugin.py` →
-   `dist/gps_road_builder.zip`.
+   `dist/gps_road_builder_ridgeslide.zip`.
 2. In QGIS: **Plugins → Manage and Install Plugins → Install from ZIP**.
 3. Open it from the **Vector** menu or the toolbar (🛰️).
 4. Open the **Dependencies** tab and install **numba** (RidgeSlide is much faster
@@ -111,6 +116,16 @@ See **[ALGORITHMS.md](ALGORITHMS.md)** for the full algorithm list and details.
 5. The network is added to the project (line width ∝ traversal frequency). Review
    the **Overview** tab and, if needed, the **Post‑process** tab.
 6. Export via the **Output** tab (GeoJSON / GraphML / SHP / GPKG).
+
+### Processing Toolbox
+
+After enabling the plugin, find **GPS Road Builder** in the Processing Toolbox.
+The public machine IDs are stable: `gpsroadbuilder:build_network_from_layer`,
+`gpsroadbuilder:build_network_from_folder`, and
+`gpsroadbuilder:postprocess_network`. Use the standard `OUTPUT` feature sink;
+each result is a line layer in EPSG:4326 with `id`, `frequency`, `length`,
+`road_class`, `reconstructed`, and `n_devices`. Processing parameters are fully
+explicit: the algorithms do not read the main dialog or its saved settings.
 
 **Full walkthrough: [USER_GUIDE.md](USER_GUIDE.md).**
 

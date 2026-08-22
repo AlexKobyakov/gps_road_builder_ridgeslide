@@ -11,7 +11,6 @@ Email: kobyakov@lesburo.ru
 Year: 2026
 """
 
-from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QFont
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QGroupBox
@@ -19,6 +18,7 @@ from qgis.PyQt.QtWidgets import (
 
 from .gui_components import create_styled_button, ModernProgressBar
 from ..translation_manager import translations
+from ..qgis_compat import qt_enum
 
 
 class AuthorInfoDialog(QDialog):
@@ -39,68 +39,80 @@ class AuthorInfoDialog(QDialog):
             }
         t = translations.get_text
         self.setWindowTitle('👤 {0}'.format(t('header_about_author')))
-        self.setFixedSize(560, 640)
+        self.setMinimumSize(560, 640)
+        self.resize(560, 640)
         self.setModal(True)
         self.setWindowFlags(
-            Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            qt_enum('WindowType', 'Dialog')
+            | qt_enum('WindowType', 'WindowTitleHint')
+            | qt_enum('WindowType', 'WindowCloseButtonHint'))
         self.setupUi()
+        self.retranslateUi()
 
     def setupUi(self):
         t = translations.get_text
-        info = self._info
         layout = QVBoxLayout(self)
         layout.setContentsMargins(25, 25, 25, 25)
         layout.setSpacing(14)
 
-        title = QLabel('🛰️ {0}'.format(info['name']))
-        title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet(
+        self.title_label = QLabel()
+        self.title_label.setAlignment(qt_enum('AlignmentFlag', 'AlignCenter'))
+        self.title_label.setStyleSheet(
             'color: #2c3e50; font-size: 20px; font-weight: bold;')
 
-        subtitle = QLabel(t('about_subtitle'))
-        subtitle.setAlignment(Qt.AlignCenter)
-        subtitle.setWordWrap(True)
-        subtitle.setStyleSheet('color: #7f8c8d; font-size: 12px;')
+        self.subtitle_label = QLabel()
+        self.subtitle_label.setAlignment(qt_enum('AlignmentFlag', 'AlignCenter'))
+        self.subtitle_label.setWordWrap(True)
+        self.subtitle_label.setStyleSheet('color: #7f8c8d; font-size: 12px;')
 
-        version = QLabel('📜 {0}: v{1}'.format(t('version'), info['version']))
-        version.setAlignment(Qt.AlignCenter)
-        version.setStyleSheet('color: #95a5a6; font-size: 11px;')
+        self.version_label = QLabel()
+        self.version_label.setAlignment(qt_enum('AlignmentFlag', 'AlignCenter'))
+        self.version_label.setStyleSheet('color: #95a5a6; font-size: 11px;')
 
-        algo = QLabel('<b style="color:#2980b9;">🧠 {0}</b><br>{1}'.format(
-            t('about_algorithm_title'), t('about_algorithm_text')))
-        algo.setWordWrap(True)
-        algo.setTextFormat(Qt.RichText)
-        algo.setStyleSheet(self._card('#eaf4fb', '#bfe0f5'))
+        self.algo_label = QLabel()
+        self.algo_label.setWordWrap(True)
+        self.algo_label.setTextFormat(qt_enum('TextFormat', 'RichText'))
+        self.algo_label.setStyleSheet(self._card('#eaf4fb', '#bfe0f5'))
 
-        contact = QLabel(
-            '<b>👨‍💻 {author_l}:</b> {author} <i>(Alex Kobyakov)</i><br>'
-            '<b>📧 {contact_l}:</b> <a href="mailto:{email}">{email}</a><br>'
-            '<b>💬 Telegram:</b> '
-            '<a href="https://t.me/AKobyakov">@AKobyakov</a><br>'
-            '<b>🏢 {org_l}:</b> Lesburo &nbsp;·&nbsp; '
-            '<b>📅 {year_l}:</b> 2026<br>'
-            '<span style="color:#7f8c8d;">{multi}</span>'.format(
-                author_l=t('author'), author=info['author'],
-                contact_l=t('contact'), email=info['email'],
-                org_l=t('organization'), year_l=t('year'),
-                multi=t('multilingual_support')))
-        contact.setWordWrap(True)
-        contact.setTextFormat(Qt.RichText)
-        contact.setOpenExternalLinks(True)
-        contact.setStyleSheet(self._card('#f8f9fa', '#dee2e6'))
+        self.contact_label = QLabel()
+        self.contact_label.setWordWrap(True)
+        self.contact_label.setTextFormat(qt_enum('TextFormat', 'RichText'))
+        self.contact_label.setOpenExternalLinks(True)
+        self.contact_label.setStyleSheet(self._card('#f8f9fa', '#dee2e6'))
 
-        close_button = create_styled_button(t('close'), 'secondary', '✖️')
-        close_button.clicked.connect(self.accept)
+        self.close_button = create_styled_button(t('close'), 'secondary', '✖️')
+        self.close_button.clicked.connect(self.accept)
 
-        layout.addWidget(title)
-        layout.addWidget(subtitle)
-        layout.addWidget(version)
-        layout.addWidget(algo)
-        layout.addWidget(contact)
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.subtitle_label)
+        layout.addWidget(self.version_label)
+        layout.addWidget(self.algo_label)
+        layout.addWidget(self.contact_label)
         layout.addStretch()
-        layout.addWidget(close_button, 0, Qt.AlignCenter)
+        layout.addWidget(
+            self.close_button, 0, qt_enum('AlignmentFlag', 'AlignCenter'))
         self.setStyleSheet(
             'QDialog { background-color: white; border-radius: 10px; }')
+
+    def retranslateUi(self):
+        t = translations.get_text
+        info = self._info
+        self.setWindowTitle('👤 ' + t('header_about_author'))
+        self.title_label.setText('🛰️ ' + info['name'])
+        self.subtitle_label.setText(t('about_subtitle'))
+        self.version_label.setText('📜 {0}: v{1}'.format(t('version'), info['version']))
+        self.algo_label.setText('<b style="color:#2980b9;">🧠 {0}</b><br>{1}'.format(
+            t('about_algorithm_title'), t('about_algorithm_text')))
+        self.contact_label.setText(
+            '<b>👨‍💻 {author_l}:</b> {author} <i>(Alex Kobyakov)</i><br>'
+            '<b>📧 {contact_l}:</b> <a href="mailto:{email}">{email}</a><br>'
+            '<b>💬 Telegram:</b> <a href="https://t.me/AKobyakov">@AKobyakov</a><br>'
+            '<b>🏢 {org_l}:</b> Lesburo &nbsp;·&nbsp; <b>📅 {year_l}:</b> 2026<br>'
+            '<span style="color:#7f8c8d;">{multi}</span>'.format(
+                author_l=t('author'), author=info['author'], contact_l=t('contact'),
+                email=info['email'], org_l=t('organization'), year_l=t('year'),
+                multi=t('multilingual_support')))
+        self.close_button.setText('✖️ ' + t('close'))
 
     @staticmethod
     def _card(bg, border):
@@ -117,12 +129,17 @@ class InstallProgressDialog(QDialog):
 
     def __init__(self, title, parent=None):
         super().__init__(parent)
+        self._title = title
         self.is_cancelled = False
         self.setWindowTitle(title)
-        self.setFixedSize(500, 220)
+        self.setMinimumSize(500, 220)
+        self.resize(500, 220)
         self.setModal(True)
-        self.setWindowFlags(Qt.Dialog | Qt.WindowTitleHint)
+        self.setWindowFlags(
+            qt_enum('WindowType', 'Dialog')
+            | qt_enum('WindowType', 'WindowTitleHint'))
         self.setupUi(title)
+        self.retranslateUi()
 
     def setupUi(self, title):
         t = translations.get_text
@@ -133,11 +150,11 @@ class InstallProgressDialog(QDialog):
         header_layout = QHBoxLayout()
         icon_label = QLabel("📥")
         icon_label.setStyleSheet("font-size: 28px;")
-        title_label = QLabel(title)
-        title_label.setStyleSheet(
+        self.title_label = QLabel(title)
+        self.title_label.setStyleSheet(
             "font-size: 14px; font-weight: bold; color: #2c3e50;")
         header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
+        header_layout.addWidget(self.title_label)
         header_layout.addStretch()
 
         self.status_label = QLabel(t('installing'))
@@ -153,7 +170,8 @@ class InstallProgressDialog(QDialog):
         layout.addLayout(header_layout)
         layout.addWidget(self.status_label)
         layout.addWidget(self.progress_bar)
-        layout.addWidget(self.cancel_button, 0, Qt.AlignCenter)
+        layout.addWidget(
+            self.cancel_button, 0, qt_enum('AlignmentFlag', 'AlignCenter'))
 
     def on_cancel(self):
         self.is_cancelled = True
@@ -169,6 +187,13 @@ class InstallProgressDialog(QDialog):
         # показываем последнюю строку вывода, обрезая слишком длинные
         self.status_label.setText(text if len(text) < 90 else text[:87] + '…')
 
+    def retranslateUi(self):
+        self.setWindowTitle(self._title)
+        self.title_label.setText(self._title)
+        if not self.status_label.text():
+            self.status_label.setText(translations.get_text('installing'))
+        self.cancel_button.setText('❌ ' + translations.get_text('cancel'))
+
 
 class ErrorDialog(QDialog):
     """Диалог отображения ошибки с деталями."""
@@ -179,6 +204,7 @@ class ErrorDialog(QDialog):
         self._message = message
         self._details = details
         self.setupUi()
+        self.retranslateUi()
 
     def setupUi(self):
         t = translations.get_text
@@ -193,16 +219,16 @@ class ErrorDialog(QDialog):
         header_layout = QHBoxLayout()
         icon_label = QLabel("❌")
         icon_label.setStyleSheet("font-size: 32px;")
-        title_label = QLabel(self._title)
-        title_label.setStyleSheet(
+        self.title_label = QLabel(self._title)
+        self.title_label.setStyleSheet(
             "font-size: 16px; font-weight: bold; color: #e74c3c;")
         header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
+        header_layout.addWidget(self.title_label)
         header_layout.addStretch()
 
-        message_label = QLabel(self._message)
-        message_label.setWordWrap(True)
-        message_label.setStyleSheet("""
+        self.message_label = QLabel(self._message)
+        self.message_label.setWordWrap(True)
+        self.message_label.setStyleSheet("""
             QLabel {
                 background-color: #fdeded;
                 border: 2px solid #f5c6cb;
@@ -213,19 +239,30 @@ class ErrorDialog(QDialog):
         """)
 
         layout.addLayout(header_layout)
-        layout.addWidget(message_label)
+        layout.addWidget(self.message_label)
 
         if self._details:
-            details_group = QGroupBox('📋 {0}'.format(t('details')))
-            details_layout = QVBoxLayout(details_group)
+            self.details_group = QGroupBox()
+            details_layout = QVBoxLayout(self.details_group)
             details_text = QTextEdit()
             details_text.setPlainText(self._details)
             details_text.setReadOnly(True)
             details_text.setMaximumHeight(150)
             details_text.setFont(QFont("Consolas", 9))
             details_layout.addWidget(details_text)
-            layout.addWidget(details_group)
+            layout.addWidget(self.details_group)
+        else:
+            self.details_group = None
 
-        close_button = create_styled_button(t('close'), "danger", "❌")
-        close_button.clicked.connect(self.accept)
-        layout.addWidget(close_button)
+        self.close_button = create_styled_button(t('close'), "danger", "❌")
+        self.close_button.clicked.connect(self.accept)
+        layout.addWidget(self.close_button)
+
+    def retranslateUi(self):
+        t = translations.get_text
+        self.setWindowTitle(self._title)
+        self.title_label.setText(self._title)
+        self.message_label.setText(self._message)
+        if self.details_group is not None:
+            self.details_group.setTitle('📋 ' + t('details'))
+        self.close_button.setText('❌ ' + t('close'))

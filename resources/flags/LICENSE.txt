@@ -1,0 +1,4 @@
+The SVG flag icons in this directory were drawn for GPS Road Builder from
+simple geometric shapes and are distributed under the plugin's GPL-3.0 license.
+They are small visual identifiers for language selection, not official flag
+artwork or a statement of endorsement.

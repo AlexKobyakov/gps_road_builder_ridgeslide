@@ -11,23 +11,25 @@ Year: 2026
 
 from datetime import datetime
 
-from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QScrollArea, QWidget,
-    QTabWidget, QTabBar, QFrame, QLabel, QComboBox
+    QTabWidget, QTabBar, QFrame, QLabel
 )
 
 from .gui_components import (
-    ModernProgressBar, apply_global_styles, create_styled_button)
+    ModernProgressBar, StyledComboBox, apply_global_styles, create_styled_button)
 from .gui_widgets import (
     HeaderWidget, ControlButtonsWidget, LogTextWidget, ResultsTableWidget,
     DependenciesWidget)
+from .i18n import (
+    preset_translation_items, replace_static_log_text, retranslate_combo)
 from .tabs import (
     DataTab, PreprocessTab, DensitySlideTab, GraphTab, ScaleTab, OutputTab,
     PostprocessTab)
 from .histogram import HistogramWidget
 from .gui_handlers import GuiEventHandlers
 from ..translation_manager import translations
+from ..qgis_compat import qt_class_enum, qt_enum
 
 
 class RobustTabBar(QTabBar):
@@ -52,10 +54,12 @@ class GpsRoadBuilderDialog(QDialog):
         self.handlers = GuiEventHandlers(self)
         self.connectSignals()
         self.setStyleSheet(apply_global_styles())
+        translations.add_language_listener(self.retranslateUi)
         self.retranslateUi()
         self.handlers.load_settings()
         self.handlers.refreshLayerCombos()
-        self.log_message('✅ ' + translations.get_text('log_ready'))
+        self._ready_log_message = '✅ ' + translations.get_text('log_ready')
+        self.log_message(self._ready_log_message)
 
     def _applySavedLanguage(self):
         try:
@@ -63,7 +67,8 @@ class GpsRoadBuilderDialog(QDialog):
             saved = SettingsManager().get('language')
             if saved:
                 translations.set_language(saved)
-        except Exception:  # nosec B110 - best-effort saved-language load, use default
+        # Best-effort saved-language load; use the current default on failure.
+        except Exception:  # nosec B110
             pass
 
     def setupWindow(self):
@@ -71,8 +76,11 @@ class GpsRoadBuilderDialog(QDialog):
         self.setMinimumSize(1040, 780)
         self.resize(1240, 900)
         self.setWindowFlags(
-            Qt.Dialog | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-            | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
+            qt_enum('WindowType', 'Dialog')
+            | qt_enum('WindowType', 'WindowTitleHint')
+            | qt_enum('WindowType', 'WindowCloseButtonHint')
+            | qt_enum('WindowType', 'WindowMinimizeButtonHint')
+            | qt_enum('WindowType', 'WindowMaximizeButtonHint'))
 
     def setupUi(self):
         main_layout = QVBoxLayout(self)
@@ -80,7 +88,7 @@ class GpsRoadBuilderDialog(QDialog):
         main_layout.setSpacing(12)
 
         self.header = HeaderWidget()
-        self.main_splitter = QSplitter(Qt.Vertical)
+        self.main_splitter = QSplitter(qt_enum('Orientation', 'Vertical'))
         self.main_splitter.setChildrenCollapsible(False)
         self._createSettingsArea()
         self._createControlButtonsArea()
@@ -98,7 +106,7 @@ class GpsRoadBuilderDialog(QDialog):
         layout = QHBoxLayout(row)
         layout.setContentsMargins(4, 0, 4, 0)
         self.preset_label = QLabel(translations.get_text('preset_label'))
-        self.preset_combo = QComboBox()
+        self.preset_combo = StyledComboBox()
         from ..core.presets import PRESET_ORDER
         for name in PRESET_ORDER:
             self.preset_combo.addItem(
@@ -131,7 +139,7 @@ class GpsRoadBuilderDialog(QDialog):
         self.settings_tabs.setStyleSheet(self._tabStyle())
         # Не обрезать названия вкладок: показывать полностью, при нехватке ширины
         # — стрелки прокрутки бара (а не «...»).
-        self.settings_tabs.tabBar().setElideMode(Qt.ElideNone)
+        self.settings_tabs.tabBar().setElideMode(qt_enum('TextElideMode', 'ElideNone'))
         self.settings_tabs.setUsesScrollButtons(True)
         self.data_tab = DataTab()
         self.preprocess_tab = PreprocessTab()
@@ -214,8 +222,9 @@ class GpsRoadBuilderDialog(QDialog):
         layout.addStretch()
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(
+            qt_enum('ScrollBarPolicy', 'ScrollBarAlwaysOff'))
+        scroll.setFrameShape(qt_class_enum(QFrame, 'Shape', 'NoFrame'))
         scroll.setWidget(inner)
         return scroll
 
@@ -273,8 +282,15 @@ class GpsRoadBuilderDialog(QDialog):
     # ------------------------------------------------------------------
 
     def connectSignals(self):
-        self.header.language_combo.currentIndexChanged.connect(
-            self.handlers.onLanguageChanged)
+        # The Qt5 Python binding exposes overloaded QComboBox signals.  Without selecting the
+        # integer overload it may send the visible label (QString), so Qt5
+        # changes the combo but the language handler cannot map it to a code.
+        try:
+            language_changed = self.header.language_combo.currentIndexChanged[int]
+        except (IndexError, KeyError, TypeError):
+            # Qt6 has a single int signal; retain the normal binding there.
+            language_changed = self.header.language_combo.currentIndexChanged
+        language_changed.connect(self.handlers.onLanguageChanged)
         self.header.donation_button.clicked.connect(self.handlers.showDonation)
         self.header.author_button.clicked.connect(self.handlers.showAuthorInfo)
         self.preset_apply_button.clicked.connect(self.handlers.applyPreset)
@@ -310,13 +326,19 @@ class GpsRoadBuilderDialog(QDialog):
 
     def retranslateUi(self):
         t = translations.get_text
+        self.setLayoutDirection(qt_enum(
+            'LayoutDirection',
+            'RightToLeft' if translations.is_rtl() else 'LeftToRight'))
         self.setWindowTitle('🛰️ ' + t('window_title'))
-        self.header.donation_button.setText('☕ ' + t('header_support'))
-        self.header.author_button.setText('👤 ' + t('header_about_author'))
+        self.header.retranslateUi()
         self.preset_label.setText(t('preset_label'))
         self.preset_apply_button.setText('🎛️ ' + t('preset_apply'))
         self.preset_save_button.setText('💾 ' + t('preset_save'))
         self.preset_load_button.setText('📂 ' + t('preset_load'))
+        from ..core.presets import PRESET_ORDER
+        retranslate_combo(
+            self.preset_combo,
+            preset_translation_items(PRESET_ORDER))
         tabs = [(0, '📁', 'tab_data'), (1, '🧹', 'tab_preprocess'),
                 (2, '🌫️', 'tab_density'), (3, '🕸️', 'tab_graph'),
                 (4, '🧩', 'tab_scale'), (5, '🛠️', 'tab_postprocess'),
@@ -324,14 +346,34 @@ class GpsRoadBuilderDialog(QDialog):
         for idx, icon, key in tabs:
             self.settings_tabs.setTabText(idx, '{0} {1}'.format(icon, t(key)))
             self.settings_tabs.setTabToolTip(idx, t(key))
-        self.control_buttons.build_button.setText('🚀 ' + t('build_graph'))
-        self.control_buttons.test_button.setText('🧪 ' + t('test_run'))
-        self.control_buttons.cancel_button.setText('❌ ' + t('cancel'))
-        self.control_buttons.clear_log_button.setText('🧹 ' + t('clear_logs'))
+        self.control_buttons.retranslateUi()
         self.progress_label.setText('📊 ' + t('progress'))
         self.results_tabs.setTabText(0, '📋 ' + t('logs'))
         self.results_tabs.setTabText(1, '📈 ' + t('results'))
         self.results_tabs.setTabText(2, '📊 ' + t('tab_overview'))
+        self.results_table.retranslateUi()
+        self.hist_frequency.set_title(t('hist_frequency_title'))
+        self.hist_length.set_title(t('hist_length_title'))
+        for widget in (self.data_tab, self.preprocess_tab, self.density_tab,
+                       self.graph_tab, self.scale_tab, self.postprocess_tab,
+                       self.output_tab, self.deps_widget):
+            widget.retranslateUi()
+        if hasattr(self, 'handlers'):
+            self.handlers.retranslateResults()
+        self._retranslate_ready_log()
+
+    def _retranslate_ready_log(self):
+        """Translate the static startup log line without erasing run history."""
+        old = getattr(self, '_ready_log_message', None)
+        new = '✅ ' + translations.get_text('log_ready')
+        if old:
+            self.log_text.setHtml(
+                replace_static_log_text(self.log_text.toHtml(), old, new))
+        self._ready_log_message = new
+
+    def closeEvent(self, event):
+        translations.remove_language_listener(self.retranslateUi)
+        super().closeEvent(event)
 
     # ------------------------------------------------------------------
     # Лог

@@ -9,8 +9,10 @@ Package the GPS Road Builder (RidgeSlide) plugin into an installable QGIS zip.
 
 Использование:
     python scripts/build_plugin.py
+    python scripts/build_plugin.py --qgis4-smoke
 """
 
+import argparse
 import os
 import zipfile
 
@@ -21,7 +23,7 @@ DIST = os.path.join(ROOT, 'dist')
 # Каталоги и файлы верхнего уровня, которые НЕ входят в плагин.
 EXCLUDE_DIRS = {
     '.git', '.github', '.claude', 'article', 'data', 'reserch', 'docs',
-    'tests', 'scripts', 'dist', '__pycache__', '.pytest_cache', '_libs', 'libs',
+    'tests', 'scripts', 'dist', '__pycache__', '.pytest_cache', '.venv', '_libs', 'libs',
     'test_temp', 'memory',
 }
 EXCLUDE_TOP_FILES = {
@@ -49,18 +51,39 @@ def _included_files():
             yield full, rel
 
 
-def build():
+def _qgis4_smoke_metadata(text):
+    """Raise the ceiling in legacy metadata; no-op after QGIS 4 release."""
+    source = 'qgisMaximumVersion=3.99'
+    if 'qgisMaximumVersion=4.99' in text:
+        return text
+    if source not in text:
+        raise ValueError('Expected production QGIS maximum version not found')
+    return text.replace(source, 'qgisMaximumVersion=4.99', 1)
+
+
+def build(qgis4_smoke=False):
     os.makedirs(DIST, exist_ok=True)
-    out = os.path.join(DIST, PLUGIN_NAME + '.zip')
+    suffix = '_qgis4_smoke' if qgis4_smoke else ''
+    out = os.path.join(DIST, PLUGIN_NAME + suffix + '.zip')
     count = 0
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
         for full, rel in _included_files():
             # внутри zip файлы кладём в папку с именем плагина
-            zf.write(full, os.path.join(PLUGIN_NAME, rel))
+            archive_name = os.path.join(PLUGIN_NAME, rel)
+            if qgis4_smoke and rel == 'metadata.txt':
+                with open(full, encoding='utf-8') as metadata:
+                    zf.writestr(archive_name, _qgis4_smoke_metadata(metadata.read()))
+            else:
+                zf.write(full, archive_name)
             count += 1
     print('Wrote {0} ({1} files)'.format(out, count))
     return out
 
 
 if __name__ == '__main__':
-    build()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--qgis4-smoke', action='store_true',
+        help='build a local-only ZIP that allows QGIS 4.x for runtime smoke')
+    args = parser.parse_args()
+    build(qgis4_smoke=args.qgis4_smoke)
