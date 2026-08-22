@@ -27,7 +27,7 @@ def test_no_direct_pyqt_major_imports():
 
 def test_qt6_sensitive_apis_are_not_used_directly():
     """Qt/QGIS enum spellings must go through qgis_compat at call sites."""
-    paths = ('plugin.py', 'gui/gui_handlers.py', 'gui/gui_main.py',
+    paths = ('plugin.py', 'core/io/writer.py', 'gui/gui_handlers.py', 'gui/gui_main.py',
              'gui/gui_widgets.py', 'gui/gui_dialogs.py', 'gui/simple_donation.py',
              'gui/histogram.py', 'gui/layers.py', 'gui/gui_components.py',
              'tasks/build_task.py')
@@ -40,6 +40,7 @@ def test_qt6_sensitive_apis_are_not_used_directly():
         r'QTableWidget\.(NoEditTriggers|SelectRows)',
         r'QAbstractItemView\.(NoEditTriggers|SelectRows)',
         r'QPainter\.Antialiasing', r'QFrame\.NoFrame',
+        r'QgsVectorFileWriter\.NoError',
     )
     for path in paths:
         text = _source(path)

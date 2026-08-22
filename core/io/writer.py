@@ -93,6 +93,7 @@ def save_vector_layer(layer, path, driver_key='gpkg'):
     Работает только в среде QGIS. driver_key: 'shp' | 'gpkg' | 'geojson'.
     """
     from qgis.core import QgsVectorFileWriter, QgsProject, QgsCoordinateTransformContext
+    from ...qgis_compat import qgis_enum
 
     options = QgsVectorFileWriter.SaveVectorOptions()
     options.driverName = DRIVERS.get(driver_key, 'GPKG')
@@ -104,6 +105,7 @@ def save_vector_layer(layer, path, driver_key='gpkg'):
         layer, path, context, options)
     # writeAsVectorFormatV3 возвращает кортеж; первый элемент — код ошибки
     code = error[0] if isinstance(error, (tuple, list)) else error
-    if code != QgsVectorFileWriter.NoError:
+    no_error = qgis_enum('VectorFileWriterError', 'NoError', QgsVectorFileWriter)
+    if code != no_error:
         raise RuntimeError('Vector export failed: {0}'.format(error))
     return path
